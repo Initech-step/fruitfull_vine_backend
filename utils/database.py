@@ -1,6 +1,14 @@
 from pymongo.mongo_client import MongoClient
 from pymongo.server_api import ServerApi
 from typing import Dict, Any
+import os
+from dotenv import load_dotenv
+
+# Load variables from .env file
+load_dotenv() 
+
+# Access the environment variables
+test_mode = os.getenv("TEST", "True")
 
 
 def connect_to_db() -> Dict[str, Any]:
@@ -12,7 +20,10 @@ def connect_to_db() -> Dict[str, Any]:
     try:
         client.admin.command("ping")
         print("Pinged your deployment. You successfully connected to MongoDB!")
-        db = client["FruitfulVine"]
+        if test_mode:
+            db = client["TestFruitfulVine"]
+        else:
+            db = client["FruitfulVine"]
         return {
             "admin_collection": db["Admin"],
             "blog_categories_collection": db["BlogCategories"],

@@ -1,7 +1,6 @@
 from fastapi import FastAPI, HTTPException, status, Request, Response, Header
 from fastapi.middleware.cors import CORSMiddleware
 from bson.objectid import ObjectId
-
 # from fastapi_pagination import Page, add_pagination
 # from fastapi_pagination.ext.pymongo import paginate
 from typing import List
@@ -10,6 +9,7 @@ from utils.database import connect_to_db
 from utils.models import (
     LogInDetails,
     Category,
+    CategoryOut,
     ImageModel,
     ImageGroup,
     BlogPost,
@@ -32,7 +32,7 @@ app.add_middleware(
 )
 
 database = connect_to_db()
-token = "t7t7PWOxi='D0ov9iG&L+.I{K!x~8g0zr^M3v_P;g(vt,mX_Bg"
+PAGINATION_PER_PAGE = 10
 
 # auth helpers
 def VALIDATE_TOKEN(token):
@@ -87,7 +87,11 @@ CATEGORY APIS
 """
 
 
-@app.post("/api/category/", status_code=status.HTTP_201_CREATED)
+@app.post(
+    "/api/category/", 
+    status_code=status.HTTP_201_CREATED,
+    response_model=dict
+)
 def create_category(category: Category, token: str = Header()):
     if VALIDATE_TOKEN(token):
         category_data = category.model_dump()
@@ -101,23 +105,28 @@ def create_category(category: Category, token: str = Header()):
                 detail="Failed to create catgory",
             )
 
-
-@app.get("/api/category/")
+@app.get(
+    "/api/category/", 
+    response_model=CategoryOut
+)
 def get_categories():
     category_collection = database['blog_categories_collection']
-    data = category_collection.find({})
-    serialized_data = [
-        {
-            "id": str(d.get("_id")),
-            "name": str(d.get("name")),
-            "description": str(d.get("description")),
-        }
-        for d in data
-    ]
-    return {"status": True, "categories": serialized_data}
+    data = list(category_collection.find({}))
+    for d in data:
+        d["_id"] = str(d["_id"])
+    return CategoryOut(
+        data=data,
+        status=True,
+        no_of_pages=0,
+        current_page=0
+    )
 
 
-@app.delete("/api/category/{c_id}/", status_code=status.HTTP_200_OK)
+@app.delete(
+    "/api/category/{c_id}/", 
+    status_code=status.HTTP_200_OK,
+    response_model=dict
+)
 def delete_category(c_id: str, token: str = Header()):
     if VALIDATE_TOKEN(token):
         category_collection = database['blog_categories_collection']
@@ -129,8 +138,11 @@ def delete_category(c_id: str, token: str = Header()):
         category_collection.delete_one(data)
         return {"status": True}
 
-
-@app.put("/api/category/{c_id}/", status_code=status.HTTP_200_OK)
+@app.put(
+    "/api/category/{c_id}/", 
+    status_code=status.HTTP_200_OK,
+    response_model=dict
+)
 def update_category(c_id: str, category: Category, token: str = Header()):
     if VALIDATE_TOKEN(token):
         category_data = category.model_dump()
@@ -138,7 +150,8 @@ def update_category(c_id: str, category: Category, token: str = Header()):
         data_target = category_collection.find_one({"_id": ObjectId(c_id)})
         if data_target == None:
             raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND, detail="Resource not found"
+                status_code=status.HTTP_404_NOT_FOUND, 
+                detail="Resource not found"
             )
         category_collection.update_one(
             {"_id": ObjectId(c_id)},
@@ -152,482 +165,239 @@ def update_category(c_id: str, category: Category, token: str = Header()):
         return {"status": True}
 
 
+
+
+
 """
-Image Management
+ BLOG APIS
 """
 
 
-# @app.post("/api/imagegroup/", status_code=status.HTTP_201_CREATED)
-# def create_image_group(image_group: ImageGroup, token: str = Header()):
-#     if VALIDATE_TOKEN(token):
-#         group_data = image_group.model_dump()
-#         group_collection = database.ImageGroup
-#         try:
-#             group_collection.insert_one(group_data)
-#             return {"status": True}
-#         except:
-#             raise HTTPException(
-#                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-#                 detail="Failed to create image Group",
-#             )
+@app.post("/api/add_post/", status_code=status.HTTP_201_CREATED)
+def add_blog_post(blog: BlogPost, token: str = Header()):
+    if VALIDATE_TOKEN(token):
+        blog_data = blog.model_dump()
+        blog_collection = database.BlogPost
+        try:
+            blog_collection.insert_one(blog_data)
+            return {"status": True}
+        except:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Failed to add blog post",
+            )
 
 
-# @app.get("/api/imagegroup/")
-# def get_imagegroup():
-#     group_collection = database.ImageGroup
-#     data = group_collection.find({})
-#     serialized_data = [
-#         {
-#             "id": str(d.get("_id")),
-#             "title": str(d.get("title")),
-#             "description": str(d.get("description")),
-#         }
-#         for d in data
-#     ]
-#     serialized_data.reverse()
-#     return {"status": True, "groups": serialized_data}
+# API FOR EDIT BLOG POST
+@app.post("/api/edit_blog_content/{b_id}", status_code=status.HTTP_200_OK)
+def edit_blog_content(blog_content: BlogPost, b_id: str, token: str = Header()):
+    if VALIDATE_TOKEN(token):
+        blog_data = blog_content.model_dump()
+        blog_collection = database.BlogPost
+        data_target = blog_collection.find_one({"_id": ObjectId(b_id)})
+        if data_target == None:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND, detail="Resource not found"
+            )
+        blog_collection.update_one(
+            {"_id": ObjectId(b_id)},
+            {
+                "$set": {
+                    "image_url": blog_data.get("image_url"),
+                    "post_title": blog_data.get("post_title"),
+                    "category_name": blog_data.get("category_name"),
+                    "category_id": blog_data.get("category_id"),
+                    "short_title": blog_data.get("short_title"),
+                    "body": blog_data.get("body"),
+                    "video": blog_data.get("video"),
+                    "iframe": blog_data.get("iframe"),
+                }
+            },
+        )
+        return {"status": True}
 
 
-# @app.post("/api/add_image/", status_code=status.HTTP_201_CREATED)
-# def add_image(image: ImageModel, token: str = Header()):
-#     if VALIDATE_TOKEN(token):
-#         image_data = image.model_dump()
-#         image_collection = database.Image
-#         try:
-#             image_collection.insert_one(image_data)
-#             return {"status": True}
-#         except:
-#             raise HTTPException(
-#                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-#                 detail="Failed to add image",
-#             )
+# GET SPECIFIC BLOG POST
+@app.get("/api/get_blog_content/{b_id}", status_code=status.HTTP_200_OK)
+def get_blog_content(b_id: str):
+    blog_collection = database.BlogPost
+    data_target = blog_collection.find_one({"_id": ObjectId(b_id)})
+    if data_target == None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Resource not found"
+        )
+    ok_data = {
+        "id": str(data_target.get("_id")),
+        "image_url": str(data_target.get("image_url")),
+        "post_title": str(data_target.get("post_title")),
+        "category_name": str(data_target.get("category_name")),
+        "category_id": str(data_target.get("category_id")),
+        "short_title": str(data_target.get("short_title")),
+        "body": str(data_target.get("body")),
+        "date": str(data_target.get("date")),
+        "video": str(data_target.get("video")),
+        "iframe": str(data_target.get("iframe")),
+    }
+    return {"status": True, "content": ok_data}
 
 
-# @app.get("/api/get_image_for_blog/")
-# def get_image_for_blog():
-#     image_collection = database.Image
-#     data = image_collection.find({"image_group_id": ""})
-#     serialized_data = [
-#         {
-#             "id": str(d.get("_id")),
-#             "title": str(d.get("image_title")),
-#             "img_url": str(d.get("url")),
-#         }
-#         for d in data
-#     ]
-#     return {"status": True, "images": serialized_data}
+# GET ALL BLOG CONTENTS
+@app.get("/api/get_blog_posts/")
+def get_blog_posts(page: int = 1, limit: int = 9):
+    blog_collection = database.BlogPost
+    data = list(blog_collection.find({}))
+    data.reverse()
+
+    number_of_pages = math.ceil(len(data) / limit)
+    serialized_data = []
+    pages = []
+
+    for num in range(1, number_of_pages + 1):
+        pages.append(num)
+        for i in range(limit):
+            # check if the list is empty
+            if data != []:
+                # select the next item on the list
+                blog_item = data[0]
+                serialized_data.append(
+                    {
+                        "id": str(blog_item.get("_id")),
+                        "post_title": str(blog_item.get("post_title")),
+                        "category_name": str(blog_item.get("category_name")),
+                        "image_url": str(blog_item.get("image_url")),
+                        "category_id": str(blog_item.get("category_id")),
+                        "body": str(blog_item.get("body")),
+                        "date": str(blog_item.get("date")),
+                        "short_title": str(blog_item.get("short_title")),
+                        # add a property of page number to the
+                        "page_no": num,
+                    }
+                )
+                # delete blog item from data
+                del data[0]
+            else:
+                break
+    return {"status": True, "blogs": serialized_data, "pages": pages}
 
 
-# @app.get("/api/get_gallery_images/{gallery_id}")
-# def get_gallery_images(gallery_id):
-#     image_collection = database.Image
-#     data = image_collection.find({"image_group_id": gallery_id})
-#     serialized_data = [
-#         {"id": str(d.get("_id")), "img_url": str(d.get("url"))} for d in data
-#     ]
-#     return {"status": True, "images": serialized_data}
+# GET BLOG POSTS BY CATEGORY
+@app.get("/api/get_posts_by_category/")
+def get_blog_posts(category_id: str, limit: int = 9):
+    blog_collection = database.BlogPost
+    data = list(blog_collection.find({"category_id": str(category_id)}))
+    data.reverse()
+
+    number_of_pages = math.ceil(len(data) / limit)
+    serialized_data = []
+    pages = []
+
+    for num in range(1, number_of_pages + 1):
+        pages.append(num)
+        for i in range(limit):
+            # check if the list is empty
+            if data != []:
+                # select the next item on the list
+                blog_item = data[0]
+                serialized_data.append(
+                    {
+                        "id": str(blog_item.get("_id")),
+                        "post_title": str(blog_item.get("post_title")),
+                        "category_name": str(blog_item.get("category_name")),
+                        "image_url": str(blog_item.get("image_url")),
+                        "category_id": str(blog_item.get("category_id")),
+                        "body": str(blog_item.get("body")),
+                        "date": str(blog_item.get("date")),
+                        "short_title": str(blog_item.get("short_title")),
+                        # add a property of page number to the
+                        "page_no": num,
+                    }
+                )
+                # delete blog item from data
+                del data[0]
+            else:
+                break
+    return {"status": True, "blogs": serialized_data, "pages": pages}
 
 
-# """
-#  BLOG APIS
-# """
+# DELETE blog CONTENT
+@app.delete("/api/del_blog_post/{b_id}/", status_code=status.HTTP_200_OK)
+def delete_blog_post(b_id: str, token: str = Header()):
+    if VALIDATE_TOKEN(token):
+        blog_collection = database.BlogPost
+        data = blog_collection.find_one({"_id": ObjectId(b_id)})
+        if data == None:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND, detail="Resource not found"
+            )
+        blog_collection.delete_one(data)
+        return {"status": True}
 
 
-# @app.post("/api/add_post/", status_code=status.HTTP_201_CREATED)
-# def add_blog_post(blog: BlogPost, token: str = Header()):
-#     if VALIDATE_TOKEN(token):
-#         blog_data = blog.model_dump()
-#         blog_collection = database.BlogPost
-#         try:
-#             blog_collection.insert_one(blog_data)
-#             return {"status": True}
-#         except:
-#             raise HTTPException(
-#                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-#                 detail="Failed to add blog post",
-#             )
+# GET LAST BLOG POST
+@app.get("/api/get_last_post/")
+def get_last_post():
+    blog_collection = database.BlogPost
+    # get last item in blog
+    all = list(blog_collection.find({}))
+    last_post = all[-1]
+    # get data for serialization
+    serialized_data = {
+        "id": str(last_post.get("_id")),
+        "post_title": str(last_post.get("post_title")),
+        "category_name": str(last_post.get("category_name")),
+        "image_url": str(last_post.get("image_url")),
+        "category_id": str(last_post.get("category_id")),
+        "body": str(last_post.get("body")),
+        "date": str(last_post.get("date")),
+        "short_title": str(last_post.get("short_title")),
+        "iframe": str(last_post.get("iframe")),
+        "video": str(last_post.get("video")),
+    }
+    return {"status": True, "data": serialized_data}
 
 
-# # API FOR EDIT BLOG POST
-# @app.post("/api/edit_blog_content/{b_id}", status_code=status.HTTP_200_OK)
-# def edit_blog_content(blog_content: BlogPost, b_id: str, token: str = Header()):
-#     if VALIDATE_TOKEN(token):
-#         blog_data = blog_content.model_dump()
-#         blog_collection = database.BlogPost
-#         data_target = blog_collection.find_one({"_id": ObjectId(b_id)})
-#         if data_target == None:
-#             raise HTTPException(
-#                 status_code=status.HTTP_404_NOT_FOUND, detail="Resource not found"
-#             )
-#         blog_collection.update_one(
-#             {"_id": ObjectId(b_id)},
-#             {
-#                 "$set": {
-#                     "image_url": blog_data.get("image_url"),
-#                     "post_title": blog_data.get("post_title"),
-#                     "category_name": blog_data.get("category_name"),
-#                     "category_id": blog_data.get("category_id"),
-#                     "short_title": blog_data.get("short_title"),
-#                     "body": blog_data.get("body"),
-#                     "video": blog_data.get("video"),
-#                     "iframe": blog_data.get("iframe"),
-#                 }
-#             },
-#         )
-#         return {"status": True}
+# GET LAST 3 POSTS
+@app.get("/api/get_recent_posts/")
+def get_blog_posts():
+    blog_collection = database.BlogPost
+    # get last item in blog
+    all = list(blog_collection.find({}))
+    serialized_data = []
+    if len(all) > 3:
+        recent_posts = all[-3:]
+        # get data for serialization
+        for d in recent_posts:
+            serialized_data.append(
+                {
+                    "id": str(d.get("_id")),
+                    "post_title": str(d.get("post_title")),
+                    "category_name": str(d.get("category_name")),
+                    "image_url": str(d.get("image_url")),
+                    "category_id": str(d.get("category_id")),
+                    "body": str(d.get("body")),
+                    "date": str(d.get("date")),
+                    "short_title": str(d.get("short_title")),
+                }
+            )
+        serialized_data.reverse()
+        return {"status": True, "blogs": serialized_data}
+    else:
+        for d in all:
+            serialized_data.append(
+                {
+                    "id": str(d.get("_id")),
+                    "post_title": str(d.get("post_title")),
+                    "category_name": str(d.get("category_name")),
+                    "image_url": str(d.get("image_url")),
+                    "category_id": str(d.get("category_id")),
+                    "body": str(d.get("body")),
+                    "date": str(d.get("date")),
+                    "short_title": str(d.get("short_title")),
+                }
+            )
+            serialized_data.reverse()
+        return {"status": True, "blogs": serialized_data}
 
 
-# # GET SPECIFIC BLOG POST
-# @app.get("/api/get_blog_content/{b_id}", status_code=status.HTTP_200_OK)
-# def get_blog_content(b_id: str):
-#     blog_collection = database.BlogPost
-#     data_target = blog_collection.find_one({"_id": ObjectId(b_id)})
-#     if data_target == None:
-#         raise HTTPException(
-#             status_code=status.HTTP_404_NOT_FOUND, detail="Resource not found"
-#         )
-#     ok_data = {
-#         "id": str(data_target.get("_id")),
-#         "image_url": str(data_target.get("image_url")),
-#         "post_title": str(data_target.get("post_title")),
-#         "category_name": str(data_target.get("category_name")),
-#         "category_id": str(data_target.get("category_id")),
-#         "short_title": str(data_target.get("short_title")),
-#         "body": str(data_target.get("body")),
-#         "date": str(data_target.get("date")),
-#         "video": str(data_target.get("video")),
-#         "iframe": str(data_target.get("iframe")),
-#     }
-#     return {"status": True, "content": ok_data}
 
 
-# # GET ALL BLOG CONTENTS
-# @app.get("/api/get_blog_posts/")
-# def get_blog_posts(page: int = 1, limit: int = 9):
-#     blog_collection = database.BlogPost
-#     data = list(blog_collection.find({}))
-#     data.reverse()
-
-#     number_of_pages = math.ceil(len(data) / limit)
-#     serialized_data = []
-#     pages = []
-
-#     for num in range(1, number_of_pages + 1):
-#         pages.append(num)
-#         for i in range(limit):
-#             # check if the list is empty
-#             if data != []:
-#                 # select the next item on the list
-#                 blog_item = data[0]
-#                 serialized_data.append(
-#                     {
-#                         "id": str(blog_item.get("_id")),
-#                         "post_title": str(blog_item.get("post_title")),
-#                         "category_name": str(blog_item.get("category_name")),
-#                         "image_url": str(blog_item.get("image_url")),
-#                         "category_id": str(blog_item.get("category_id")),
-#                         "body": str(blog_item.get("body")),
-#                         "date": str(blog_item.get("date")),
-#                         "short_title": str(blog_item.get("short_title")),
-#                         # add a property of page number to the
-#                         "page_no": num,
-#                     }
-#                 )
-#                 # delete blog item from data
-#                 del data[0]
-#             else:
-#                 break
-#     return {"status": True, "blogs": serialized_data, "pages": pages}
-
-
-# # GET BLOG POSTS BY CATEGORY
-# @app.get("/api/get_posts_by_category/")
-# def get_blog_posts(category_id: str, limit: int = 9):
-#     blog_collection = database.BlogPost
-#     data = list(blog_collection.find({"category_id": str(category_id)}))
-#     data.reverse()
-
-#     number_of_pages = math.ceil(len(data) / limit)
-#     serialized_data = []
-#     pages = []
-
-#     for num in range(1, number_of_pages + 1):
-#         pages.append(num)
-#         for i in range(limit):
-#             # check if the list is empty
-#             if data != []:
-#                 # select the next item on the list
-#                 blog_item = data[0]
-#                 serialized_data.append(
-#                     {
-#                         "id": str(blog_item.get("_id")),
-#                         "post_title": str(blog_item.get("post_title")),
-#                         "category_name": str(blog_item.get("category_name")),
-#                         "image_url": str(blog_item.get("image_url")),
-#                         "category_id": str(blog_item.get("category_id")),
-#                         "body": str(blog_item.get("body")),
-#                         "date": str(blog_item.get("date")),
-#                         "short_title": str(blog_item.get("short_title")),
-#                         # add a property of page number to the
-#                         "page_no": num,
-#                     }
-#                 )
-#                 # delete blog item from data
-#                 del data[0]
-#             else:
-#                 break
-#     return {"status": True, "blogs": serialized_data, "pages": pages}
-
-
-# # DELETE blog CONTENT
-# @app.delete("/api/del_blog_post/{b_id}/", status_code=status.HTTP_200_OK)
-# def delete_blog_post(b_id: str, token: str = Header()):
-#     if VALIDATE_TOKEN(token):
-#         blog_collection = database.BlogPost
-#         data = blog_collection.find_one({"_id": ObjectId(b_id)})
-#         if data == None:
-#             raise HTTPException(
-#                 status_code=status.HTTP_404_NOT_FOUND, detail="Resource not found"
-#             )
-#         blog_collection.delete_one(data)
-#         return {"status": True}
-
-
-# # GET LAST BLOG POST
-# @app.get("/api/get_last_post/")
-# def get_last_post():
-#     blog_collection = database.BlogPost
-#     # get last item in blog
-#     all = list(blog_collection.find({}))
-#     last_post = all[-1]
-#     # get data for serialization
-#     serialized_data = {
-#         "id": str(last_post.get("_id")),
-#         "post_title": str(last_post.get("post_title")),
-#         "category_name": str(last_post.get("category_name")),
-#         "image_url": str(last_post.get("image_url")),
-#         "category_id": str(last_post.get("category_id")),
-#         "body": str(last_post.get("body")),
-#         "date": str(last_post.get("date")),
-#         "short_title": str(last_post.get("short_title")),
-#         "iframe": str(last_post.get("iframe")),
-#         "video": str(last_post.get("video")),
-#     }
-#     return {"status": True, "data": serialized_data}
-
-
-# # GET LAST 3 POSTS
-# @app.get("/api/get_recent_posts/")
-# def get_blog_posts():
-#     blog_collection = database.BlogPost
-#     # get last item in blog
-#     all = list(blog_collection.find({}))
-#     serialized_data = []
-#     if len(all) > 3:
-#         recent_posts = all[-3:]
-#         # get data for serialization
-#         for d in recent_posts:
-#             serialized_data.append(
-#                 {
-#                     "id": str(d.get("_id")),
-#                     "post_title": str(d.get("post_title")),
-#                     "category_name": str(d.get("category_name")),
-#                     "image_url": str(d.get("image_url")),
-#                     "category_id": str(d.get("category_id")),
-#                     "body": str(d.get("body")),
-#                     "date": str(d.get("date")),
-#                     "short_title": str(d.get("short_title")),
-#                 }
-#             )
-#         serialized_data.reverse()
-#         return {"status": True, "blogs": serialized_data}
-#     else:
-#         for d in all:
-#             serialized_data.append(
-#                 {
-#                     "id": str(d.get("_id")),
-#                     "post_title": str(d.get("post_title")),
-#                     "category_name": str(d.get("category_name")),
-#                     "image_url": str(d.get("image_url")),
-#                     "category_id": str(d.get("category_id")),
-#                     "body": str(d.get("body")),
-#                     "date": str(d.get("date")),
-#                     "short_title": str(d.get("short_title")),
-#                 }
-#             )
-#             serialized_data.reverse()
-#         return {"status": True, "blogs": serialized_data}
-
-
-# """
-# PAGE CONTENT API
-# """
-
-
-# # API FOR ADDING PAGE
-# @app.post("/api/add_page_content/", status_code=status.HTTP_201_CREATED)
-# def add_blog_post(page_content: PageContent, token: str = Header()):
-#     if VALIDATE_TOKEN(token):
-#         page_data = page_content.model_dump()
-#         page_collection = database.PageContent
-#         try:
-#             page_collection.insert_one(page_data)
-#             return {"status": True}
-#         except:
-#             raise HTTPException(
-#                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-#                 detail="Failed to add page content",
-#             )
-
-
-# # API FOR EDIT PAGE CONTENT
-# @app.post("/api/edit_page_content/{c_id}", status_code=status.HTTP_200_OK)
-# def edit_page_content(page_content: PageContent, c_id: str, token: str = Header()):
-#     if VALIDATE_TOKEN(token):
-#         page_data = page_content.model_dump()
-#         page_collection = database.PageContent
-#         data_target = page_collection.find_one({"_id": ObjectId(c_id)})
-#         if data_target == None:
-#             raise HTTPException(
-#                 status_code=status.HTTP_404_NOT_FOUND, detail="Resource not found"
-#             )
-#         page_collection.update_one(
-#             {"_id": ObjectId(c_id)},
-#             {
-#                 "$set": {
-#                     "image_url": page_data.get("image_url"),
-#                     "content_title": page_data.get("content_title"),
-#                     "body": page_data.get("body"),
-#                     "page": page_data.get("page"),
-#                 }
-#             },
-#         )
-#         return {"status": True}
-
-
-# # GET SPECIFIC PAGE CONTENT
-# @app.get("/api/edit_page_content/{c_id}", status_code=status.HTTP_200_OK)
-# def get_page_content(c_id: str):
-#     page_collection = database.PageContent
-#     data_target = page_collection.find_one({"_id": ObjectId(c_id)})
-#     if data_target == None:
-#         raise HTTPException(
-#             status_code=status.HTTP_404_NOT_FOUND, detail="Resource not found"
-#         )
-#     ok_data = {
-#         "id": str(data_target.get("_id")),
-#         "image_url": str(data_target.get("image_url")),
-#         "content_title": str(data_target.get("content_title")),
-#         "body": str(data_target.get("body")),
-#         "page": str(data_target.get("page")),
-#     }
-#     return {"status": True, "content": ok_data}
-
-
-# # GET ALL PAGE CONTENTS
-# @app.get("/api/get_page_content/")
-# def get_image_for_blog():
-#     image_collection = database.PageContent
-#     data = image_collection.find({})
-#     serialized_data = [
-#         {
-#             "id": str(d.get("_id")),
-#             "content_title": str(d.get("content_title")),
-#             "page": str(d.get("page")),
-#         }
-#         for d in data
-#     ]
-
-#     return {"status": True, "contents": serialized_data}
-
-
-# # GET SPECIFIC PAGE CONTENTS
-# @app.get("/api/get_specific_page_content/{page}")
-# def get_specific_page_content(page: str):
-#     page_collection = database.PageContent
-#     data = page_collection.find({"page": page})
-#     serialized_data = [
-#         {
-#             "id": str(d.get("_id")),
-#             "content_title": str(d.get("content_title")),
-#             "image_url": str(d.get("image_url")),
-#             "body": str(d.get("body")),
-#             "page": str(d.get("page")),
-#         }
-#         for d in data
-#     ]
-#     return {"status": True, "contents": serialized_data}
-
-
-# # DELETE PAGE CONTENT
-# @app.delete("/api/del_page_content/{c_id}/", status_code=status.HTTP_200_OK)
-# def delete_page_content(c_id: str, token: str = Header()):
-#     if VALIDATE_TOKEN(token):
-#         page_collection = database.PageContent
-#         data = page_collection.find_one({"_id": ObjectId(c_id)})
-#         if data == None:
-#             raise HTTPException(
-#                 status_code=status.HTTP_404_NOT_FOUND, detail="Resource not found"
-#             )
-#         page_collection.delete_one(data)
-#         return {"status": True}
-
-
-# """
-# Admin home page stat
-# """
-
-
-# @app.get("/api/get_stat/")
-# def get_specific_page_content(token: str = Header()):
-#     if VALIDATE_TOKEN(token):
-#         post_count = database.BlogPost.count_documents({})
-#         cat_count = database.Category.count_documents({})
-#         return {
-#             "status": True,
-#             "number_of_posts": post_count,
-#             "number_of_categories": cat_count,
-#         }
-
-
-# """
-# Email newsletter API
-# """
-
-
-# def not_duplicate(email_data):
-#     newsletter_collection = database.Emails
-#     test = newsletter_collection.find_one({"email": email_data.get("email")})
-#     print(test)
-#     if test == None:
-#         return True
-#     else:
-#         return False
-
-
-# # API FOR ADDING PAGE
-# @app.post("/api/register_email/", status_code=status.HTTP_201_CREATED)
-# def add_email(newsletter: EmailNewsletter):
-#     email_data = newsletter.model_dump()
-#     newsletter_collection = database.Emails
-#     if not_duplicate(email_data):
-#         try:
-#             newsletter_collection.insert_one(email_data)
-#             return {"status": True}
-#         except:
-#             return {"status": False}
-#     else:
-#         return {"status": False}
-
-
-# # GET ALL EMAILS
-# @app.get("/api/get_emai/")
-# def get_image_for_blog(token: str = Header()):
-#     if VALIDATE_TOKEN(token):
-#         newsletter_collection = database.Emails
-#         data = newsletter_collection.find({})
-#         serialized_data = [
-#             {"id": str(d.get("_id")), "email": str(d.get("email"))} for d in data
-#         ]
-
-#         return {"status": True, "contents": serialized_data}

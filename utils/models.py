@@ -1,11 +1,27 @@
 from pydantic import BaseModel, Field
 from datetime import date
+from typing import Optional
 
+# shared models
+class OutputModel(BaseModel):
+    id: str = Field(alias="_id")
 
-# design schemas
+class PaginationAndStatus(BaseModel):
+    status: bool = True
+    no_of_pages: int = 0
+    current_page: int = 0
+
+# specific models
 class Category(BaseModel):
     name: str
     description: str
+
+class CategoryOutputModel(OutputModel):
+    name: str
+    description: str
+
+class CategoryOut(PaginationAndStatus):
+    data: list[CategoryOutputModel]
 
 
 class EmailNewsletter(BaseModel):
@@ -53,3 +69,5 @@ class Admin(BaseModel):
 class LogInDetails(BaseModel):
     email: str
     password: str
+
+
