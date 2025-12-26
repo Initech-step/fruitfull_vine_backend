@@ -1,27 +1,30 @@
 from pydantic import BaseModel, Field
 from datetime import date
 from typing import Optional
+from enum import Enum
+
 
 # shared models
 class OutputModel(BaseModel):
     id: str = Field(alias="_id")
 
-class PaginationAndStatus(BaseModel):
-    status: bool = True
-    no_of_pages: int = 0
-    current_page: int = 0
+
+class CategoryType(Enum):
+    product="product"
+    blog="blog"
+
 
 # specific models
 class Category(BaseModel):
     name: str
+    type: str = CategoryType.product.value
     description: str
 
-class CategoryOutputModel(OutputModel):
+
+class CategoryOut(OutputModel):
     name: str
     description: str
-
-class CategoryOut(PaginationAndStatus):
-    data: list[CategoryOutputModel]
+    type: str = CategoryType.product.value
 
 
 class EmailNewsletter(BaseModel):
@@ -49,15 +52,25 @@ class BlogPost(BaseModel):
     short_title: str
     body: str
     date: str = Field(default=str(date.today()))
-    video: bool = False
     iframe: str
 
 
-class PageContent(BaseModel):
+class BlogPostOut(OutputModel):
     image_url: str
-    content_title: str
+    category_id: str
+    category_name: str
+    post_title: str
+    short_title: str
     body: str
-    page: str
+    date: str = Field(default=str(date.today()))
+    iframe: str
+
+
+class BlogPostOutMultiple(BaseModel):
+    current_page: int = 0
+    pages: int = 0
+    blogs: list[BlogPostOut] = []
+
 
 
 class Admin(BaseModel):
@@ -71,3 +84,30 @@ class LogInDetails(BaseModel):
     password: str
 
 
+
+class Product(BaseModel):
+    image_url: str
+    category_id: str
+    category_name: str
+    product_name: str
+    short_description: str
+    body: str
+    date: str = Field(default=str(date.today()))
+    iframe: str
+
+
+class ProductOut(OutputModel):
+    image_url: str
+    category_id: str
+    category_name: str
+    product_name: str
+    short_description: str
+    body: str
+    date: str = Field(default=str(date.today()))
+    iframe: str
+
+
+class ProductMultiple(BaseModel):
+    current_page: int = 0
+    pages: int = 0
+    blogs: list[ProductOut] = []

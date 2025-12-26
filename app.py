@@ -10,11 +10,13 @@ from utils.models import (
     LogInDetails,
     Category,
     CategoryOut,
-    ImageModel,
-    ImageGroup,
     BlogPost,
+    BlogPostOut,
+    BlogPostOutMultiple,
     Admin,
-    PageContent,
+    Product,
+    ProductOut,
+    ProductMultiple,
     EmailNewsletter,
 )
 
@@ -22,7 +24,7 @@ from utils.models import (
 app = FastAPI()
 
 """SET UP CORS"""
-origins = ["http://localhost:5173", "https://fyapurplegirls.org"]
+origins = ["http://localhost:5173"]
 app.add_middleware(
     CORSMiddleware,
     allow_origins=origins,
@@ -107,19 +109,14 @@ def create_category(category: Category, token: str = Header()):
 
 @app.get(
     "/api/category/", 
-    response_model=CategoryOut
+    response_model=List[CategoryOut]
 )
 def get_categories():
     category_collection = database['blog_categories_collection']
     data = list(category_collection.find({}))
     for d in data:
         d["_id"] = str(d["_id"])
-    return CategoryOut(
-        data=data,
-        status=True,
-        no_of_pages=0,
-        current_page=0
-    )
+    return data
 
 
 @app.delete(
@@ -144,28 +141,26 @@ def delete_category(c_id: str, token: str = Header()):
     response_model=dict
 )
 def update_category(c_id: str, category: Category, token: str = Header()):
-    if VALIDATE_TOKEN(token):
-        category_data = category.model_dump()
-        category_collection = database['blog_categories_collection']
-        data_target = category_collection.find_one({"_id": ObjectId(c_id)})
-        if data_target == None:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND, 
-                detail="Resource not found"
-            )
-        category_collection.update_one(
-            {"_id": ObjectId(c_id)},
-            {
-                "$set": {
-                    "name": category_data.get("name"),
-                    "description": category_data.get("description"),
-                }
-            },
+    VALIDATE_TOKEN(token)
+
+    category_data = category.model_dump()
+    category_collection = database['blog_categories_collection']
+    data_target = category_collection.find_one({"_id": ObjectId(c_id)})
+    if data_target == None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, 
+            detail="Resource not found"
         )
-        return {"status": True}
-
-
-
+    category_collection.update_one(
+        {"_id": ObjectId(c_id)},
+        {
+            "$set": {
+                "name": category_data.get("name"),
+                "description": category_data.get("description"),
+            }
+        },
+    )
+    return {"status": True}
 
 
 """
@@ -173,231 +168,426 @@ def update_category(c_id: str, category: Category, token: str = Header()):
 """
 
 
-@app.post("/api/add_post/", status_code=status.HTTP_201_CREATED)
-def add_blog_post(blog: BlogPost, token: str = Header()):
-    if VALIDATE_TOKEN(token):
-        blog_data = blog.model_dump()
-        blog_collection = database.BlogPost
-        try:
-            blog_collection.insert_one(blog_data)
-            return {"status": True}
-        except:
-            raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail="Failed to add blog post",
-            )
+@app.post(
+    "/api/blog/",
+    status_code=status.HTTP_201_CREATED,
+    response_model=dict
+)
+def create_blog(blog: BlogPost, token: str = Header()):
+    VALIDATE_TOKEN(token)
+    blog_collection = database["blog_posts_collection"]
+    blog_collection.insert_one(blog.model_dump())
+
+    return {"status": True}
 
 
-# API FOR EDIT BLOG POST
-@app.post("/api/edit_blog_content/{b_id}", status_code=status.HTTP_200_OK)
-def edit_blog_content(blog_content: BlogPost, b_id: str, token: str = Header()):
-    if VALIDATE_TOKEN(token):
-        blog_data = blog_content.model_dump()
-        blog_collection = database.BlogPost
-        data_target = blog_collection.find_one({"_id": ObjectId(b_id)})
-        if data_target == None:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND, detail="Resource not found"
-            )
-        blog_collection.update_one(
-            {"_id": ObjectId(b_id)},
-            {
-                "$set": {
-                    "image_url": blog_data.get("image_url"),
-                    "post_title": blog_data.get("post_title"),
-                    "category_name": blog_data.get("category_name"),
-                    "category_id": blog_data.get("category_id"),
-                    "short_title": blog_data.get("short_title"),
-                    "body": blog_data.get("body"),
-                    "video": blog_data.get("video"),
-                    "iframe": blog_data.get("iframe"),
-                }
-            },
-        )
-        return {"status": True}
+@app.post(
+    "/api/edit_blog_content/{b_id}", 
+    status_code=status.HTTP_200_OK,
+    response_model=BlogPostOut
+)
+def edit_blog_content(
+    blog_content: BlogPost, 
+    b_id: str, 
+    token: str = Header()
+):
+    VALIDATE_TOKEN(token)
 
-
-# GET SPECIFIC BLOG POST
-@app.get("/api/get_blog_content/{b_id}", status_code=status.HTTP_200_OK)
-def get_blog_content(b_id: str):
-    blog_collection = database.BlogPost
+    blog_data = blog_content.model_dump()
+    blog_collection = database["blog_posts_collection"]
     data_target = blog_collection.find_one({"_id": ObjectId(b_id)})
     if data_target == None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Resource not found"
         )
-    ok_data = {
-        "id": str(data_target.get("_id")),
-        "image_url": str(data_target.get("image_url")),
-        "post_title": str(data_target.get("post_title")),
-        "category_name": str(data_target.get("category_name")),
-        "category_id": str(data_target.get("category_id")),
-        "short_title": str(data_target.get("short_title")),
-        "body": str(data_target.get("body")),
-        "date": str(data_target.get("date")),
-        "video": str(data_target.get("video")),
-        "iframe": str(data_target.get("iframe")),
-    }
-    return {"status": True, "content": ok_data}
+    blog_collection.update_one(
+        {"_id": ObjectId(b_id)},
+        {
+            "$set": {
+                "image_url": blog_data.get("image_url"),
+                "post_title": blog_data.get("post_title"),
+                "category_name": blog_data.get("category_name"),
+                "category_id": blog_data.get("category_id"),
+                "short_title": blog_data.get("short_title"),
+                "body": blog_data.get("body"),
+                "iframe": blog_data.get("iframe"),
+            }
+        },
+    )
+    data_output = blog_collection.find_one({"_id": ObjectId(b_id)})
+    data_output["_id"] = str(data_output["_id"])
+    return data_output
+
+
+# GET SPECIFIC BLOG POST
+@app.get(
+    "/api/get_blog_content/{b_id}", 
+    status_code=status.HTTP_200_OK,
+    response_model=BlogPostOut
+)
+def get_blog_content(b_id: str):
+    blog_collection = database["blog_posts_collection"]
+    data_target = blog_collection.find_one({"_id": ObjectId(b_id)})
+    data_target["_id"] = str(data_target["_id"])
+
+    if data_target == None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Resource not found"
+        )
+    
+    return data_target
 
 
 # GET ALL BLOG CONTENTS
-@app.get("/api/get_blog_posts/")
-def get_blog_posts(page: int = 1, limit: int = 9):
-    blog_collection = database.BlogPost
-    data = list(blog_collection.find({}))
-    data.reverse()
+@app.get(
+    "/api/get_blog_posts/",
+    response_model=BlogPostOutMultiple,
+)
+def get_blog_posts(page: int = 1, limit: int = 15):
+    blog_collection = database["blog_posts_collection"]
 
-    number_of_pages = math.ceil(len(data) / limit)
-    serialized_data = []
-    pages = []
+    # guardrails
+    page = max(page, 1)
+    limit = min(max(limit, 1), 50)
+    skip = (page - 1) * limit
 
-    for num in range(1, number_of_pages + 1):
-        pages.append(num)
-        for i in range(limit):
-            # check if the list is empty
-            if data != []:
-                # select the next item on the list
-                blog_item = data[0]
-                serialized_data.append(
-                    {
-                        "id": str(blog_item.get("_id")),
-                        "post_title": str(blog_item.get("post_title")),
-                        "category_name": str(blog_item.get("category_name")),
-                        "image_url": str(blog_item.get("image_url")),
-                        "category_id": str(blog_item.get("category_id")),
-                        "body": str(blog_item.get("body")),
-                        "date": str(blog_item.get("date")),
-                        "short_title": str(blog_item.get("short_title")),
-                        # add a property of page number to the
-                        "page_no": num,
-                    }
-                )
-                # delete blog item from data
-                del data[0]
-            else:
-                break
-    return {"status": True, "blogs": serialized_data, "pages": pages}
+    total_docs = blog_collection.count_documents({})
+    total_pages = math.ceil(total_docs / limit)
+
+    cursor = (
+        blog_collection
+        .find({})
+        .sort("_id", -1)
+        .skip(skip)
+        .limit(limit)
+    )
+
+    blogs = []
+    for doc in cursor:
+        doc["_id"] = str(doc["_id"])
+        blogs.append(doc)
+        
+    return {
+        "blogs": blogs,
+        "pages": total_pages,
+        "current_page": page
+    }
 
 
-# GET BLOG POSTS BY CATEGORY
-@app.get("/api/get_posts_by_category/")
-def get_blog_posts(category_id: str, limit: int = 9):
-    blog_collection = database.BlogPost
-    data = list(blog_collection.find({"category_id": str(category_id)}))
-    data.reverse()
+@app.get(
+    "/api/get_blog_posts_by_category/",
+    response_model=BlogPostOutMultiple,
+)
+def get_blog_posts_by_category(
+    category_id: str,
+    page: int = 1, 
+    limit: int = 15
+):
+    blog_collection = database["blog_posts_collection"]
 
-    number_of_pages = math.ceil(len(data) / limit)
-    serialized_data = []
-    pages = []
+    # guardrails
+    page = max(page, 1)
+    limit = min(max(limit, 1), 50)
+    skip = (page - 1) * limit
 
-    for num in range(1, number_of_pages + 1):
-        pages.append(num)
-        for i in range(limit):
-            # check if the list is empty
-            if data != []:
-                # select the next item on the list
-                blog_item = data[0]
-                serialized_data.append(
-                    {
-                        "id": str(blog_item.get("_id")),
-                        "post_title": str(blog_item.get("post_title")),
-                        "category_name": str(blog_item.get("category_name")),
-                        "image_url": str(blog_item.get("image_url")),
-                        "category_id": str(blog_item.get("category_id")),
-                        "body": str(blog_item.get("body")),
-                        "date": str(blog_item.get("date")),
-                        "short_title": str(blog_item.get("short_title")),
-                        # add a property of page number to the
-                        "page_no": num,
-                    }
-                )
-                # delete blog item from data
-                del data[0]
-            else:
-                break
-    return {"status": True, "blogs": serialized_data, "pages": pages}
+    total_docs = blog_collection.count_documents({})
+    total_pages = math.ceil(total_docs / limit)
+
+    cursor = (
+        blog_collection
+        .find({"category_id":str(category_id)})
+        .sort("_id", -1)
+        .skip(skip)
+        .limit(limit)
+    )
+
+    blogs = []
+    for doc in cursor:
+        doc["_id"] = str(doc["_id"])
+        blogs.append(doc)
+        
+    return {
+        "blogs": blogs,
+        "pages": total_pages,
+        "current_page": page
+    }
 
 
 # DELETE blog CONTENT
-@app.delete("/api/del_blog_post/{b_id}/", status_code=status.HTTP_200_OK)
+@app.delete(
+    "/api/del_blog_post/{b_id}/",
+    status_code=status.HTTP_200_OK
+)
 def delete_blog_post(b_id: str, token: str = Header()):
-    if VALIDATE_TOKEN(token):
-        blog_collection = database.BlogPost
-        data = blog_collection.find_one({"_id": ObjectId(b_id)})
-        if data == None:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND, detail="Resource not found"
-            )
-        blog_collection.delete_one(data)
-        return {"status": True}
+    VALIDATE_TOKEN(token)
+    blog_collection = database["blog_posts_collection"]
+    data = blog_collection.find_one({"_id": ObjectId(b_id)})
+    if data == None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Resource not found"
+        )
+    blog_collection.delete_one(data)
+    return {"status": True}
 
 
 # GET LAST BLOG POST
-@app.get("/api/get_last_post/")
+@app.get(
+    "/api/get_last_post/", 
+    response_model=BlogPostOut
+)
 def get_last_post():
-    blog_collection = database.BlogPost
-    # get last item in blog
-    all = list(blog_collection.find({}))
-    last_post = all[-1]
-    # get data for serialization
-    serialized_data = {
-        "id": str(last_post.get("_id")),
-        "post_title": str(last_post.get("post_title")),
-        "category_name": str(last_post.get("category_name")),
-        "image_url": str(last_post.get("image_url")),
-        "category_id": str(last_post.get("category_id")),
-        "body": str(last_post.get("body")),
-        "date": str(last_post.get("date")),
-        "short_title": str(last_post.get("short_title")),
-        "iframe": str(last_post.get("iframe")),
-        "video": str(last_post.get("video")),
+    blog_collection = database["blog_posts_collection"]
+    last_post = blog_collection.find_one(
+        {},
+        sort=[("_id", -1)]
+    )
+
+    if not last_post:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="No blog posts found"
+        )
+
+    last_post["_id"] = str(last_post["_id"])
+    return last_post
+
+
+@app.get(
+    "/api/get_recent_posts/",
+    response_model=BlogPostOutMultiple
+)
+def get_recent_posts(limit: int = 3):
+    blog_collection = database["blog_posts_collection"]
+
+    cursor = (
+        blog_collection
+        .find({})
+        .sort("_id", -1)
+        .limit(limit)
+    )
+
+    blogs = []
+    for doc in cursor:
+        doc["_id"] = str(doc["_id"])
+        blogs.append(doc)
+
+    return {
+        "blogs": blogs
     }
-    return {"status": True, "data": serialized_data}
 
 
-# GET LAST 3 POSTS
-@app.get("/api/get_recent_posts/")
-def get_blog_posts():
-    blog_collection = database.BlogPost
-    # get last item in blog
-    all = list(blog_collection.find({}))
-    serialized_data = []
-    if len(all) > 3:
-        recent_posts = all[-3:]
-        # get data for serialization
-        for d in recent_posts:
-            serialized_data.append(
-                {
-                    "id": str(d.get("_id")),
-                    "post_title": str(d.get("post_title")),
-                    "category_name": str(d.get("category_name")),
-                    "image_url": str(d.get("image_url")),
-                    "category_id": str(d.get("category_id")),
-                    "body": str(d.get("body")),
-                    "date": str(d.get("date")),
-                    "short_title": str(d.get("short_title")),
-                }
-            )
-        serialized_data.reverse()
-        return {"status": True, "blogs": serialized_data}
-    else:
-        for d in all:
-            serialized_data.append(
-                {
-                    "id": str(d.get("_id")),
-                    "post_title": str(d.get("post_title")),
-                    "category_name": str(d.get("category_name")),
-                    "image_url": str(d.get("image_url")),
-                    "category_id": str(d.get("category_id")),
-                    "body": str(d.get("body")),
-                    "date": str(d.get("date")),
-                    "short_title": str(d.get("short_title")),
-                }
-            )
-            serialized_data.reverse()
-        return {"status": True, "blogs": serialized_data}
+"""
+PRODUCTS
+"""
+
+@app.post(
+    "/api/product/",
+    status_code=status.HTTP_201_CREATED,
+    response_model=dict
+)
+def create_product(product: BlogPost, token: str = Header()):
+    VALIDATE_TOKEN(token)
+    product_collection = database["products_collection"]
+    product_collection.insert_one(product.model_dump())
+    return {"status": True}
 
 
+@app.post(
+    "/api/edit_product/{b_id}", 
+    status_code=status.HTTP_200_OK,
+    response_model=BlogPostOut
+)
+def edit_product(
+    blog_content: BlogPost, 
+    b_id: str, 
+    token: str = Header()
+):
+    VALIDATE_TOKEN(token)
 
+    blog_data = blog_content.model_dump()
+    product_collection = database["products_collection"]
+    data_target = product_collection.find_one({"_id": ObjectId(b_id)})
+    if data_target == None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Resource not found"
+        )
+    product_collection.update_one(
+        {"_id": ObjectId(b_id)},
+        {
+            "$set": {
+                "image_url": blog_data.get("image_url"),
+                "product_name": blog_data.get("product_name"),
+                "category_name": blog_data.get("category_name"),
+                "category_id": blog_data.get("category_id"),
+                "short_description": blog_data.get("short_description"),
+                "body": blog_data.get("body"),
+                "iframe": blog_data.get("iframe"),
+            }
+        },
+    )
+    data_output = product_collection.find_one({"_id": ObjectId(b_id)})
+    data_output["_id"] = str(data_output["_id"])
+    return data_output
+
+
+@app.get(
+    "/api/get_product/{b_id}", 
+    status_code=status.HTTP_200_OK,
+    response_model=BlogPostOut
+)
+def get_product(b_id: str):
+    product_collection = database["products_collection"]
+    data_target = product_collection.find_one({"_id": ObjectId(b_id)})
+    data_target["_id"] = str(data_target["_id"])
+
+    if data_target == None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Resource not found"
+        )
+    
+    return data_target
+
+
+@app.get(
+    "/api/get_products/",
+    response_model=BlogPostOutMultiple,
+)
+def get_products(page: int = 1, limit: int = 15):
+    product_collection = database["products_collection"]
+
+    # guardrails
+    page = max(page, 1)
+    limit = min(max(limit, 1), 50)
+    skip = (page - 1) * limit
+
+    total_docs = product_collection.count_documents({})
+    total_pages = math.ceil(total_docs / limit)
+
+    cursor = (
+        product_collection
+        .find({})
+        .sort("_id", -1)
+        .skip(skip)
+        .limit(limit)
+    )
+
+    blogs = []
+    for doc in cursor:
+        doc["_id"] = str(doc["_id"])
+        blogs.append(doc)
+        
+    return {
+        "blogs": blogs,
+        "pages": total_pages,
+        "current_page": page
+    }
+
+
+@app.get(
+    "/api/get_product_by_category/",
+    response_model=BlogPostOutMultiple,
+)
+def get_product_by_category(
+    category_id: str,
+    page: int = 1, 
+    limit: int = 15
+):
+    product_collection = database["products_collection"]
+
+    # guardrails
+    page = max(page, 1)
+    limit = min(max(limit, 1), 50)
+    skip = (page - 1) * limit
+
+    total_docs = product_collection.count_documents({})
+    total_pages = math.ceil(total_docs / limit)
+
+    cursor = (
+        product_collection
+        .find({"category_id":str(category_id)})
+        .sort("_id", -1)
+        .skip(skip)
+        .limit(limit)
+    )
+
+    blogs = []
+    for doc in cursor:
+        doc["_id"] = str(doc["_id"])
+        blogs.append(doc)
+        
+    return {
+        "blogs": blogs,
+        "pages": total_pages,
+        "current_page": page
+    }
+
+
+@app.delete(
+    "/api/del_product/{b_id}/",
+    status_code=status.HTTP_200_OK
+)
+def delete_product(b_id: str, token: str = Header()):
+    VALIDATE_TOKEN(token)
+    product_collection = database["products_collection"]
+    data = product_collection.find_one({"_id": ObjectId(b_id)})
+    if data == None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Resource not found"
+        )
+    product_collection.delete_one(data)
+    return {"status": True}
+
+
+@app.get(
+    "/api/get_last_product/", 
+    response_model=BlogPostOut
+)
+def get_last_product():
+    product_collection = database["products_collection"]
+    last_post = product_collection.find_one(
+        {},
+        sort=[("_id", -1)]
+    )
+
+    if not last_post:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="No blog posts found"
+        )
+
+    last_post["_id"] = str(last_post["_id"])
+    return last_post
+
+
+@app.get(
+    "/api/get_recent_product/",
+    response_model=BlogPostOutMultiple
+)
+def get_recent_products(limit: int = 3):
+    product_collection = database["products_collection"]
+
+    cursor = (
+        product_collection
+        .find({})
+        .sort("_id", -1)
+        .limit(limit)
+    )
+
+    blogs = []
+    for doc in cursor:
+        doc["_id"] = str(doc["_id"])
+        blogs.append(doc)
+
+    return {
+        "blogs": blogs
+    }
+
+
+"""
+CONTACT US
+"""
+
+# Create
+
+# Read
 

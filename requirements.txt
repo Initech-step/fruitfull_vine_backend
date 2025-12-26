@@ -1,7 +1,10 @@
 annotated-doc==0.0.4
 annotated-types==0.7.0
 anyio==4.12.0
+awscrt==0.29.2
 black==25.12.0
+boto3==1.42.16
+botocore==1.42.16
 certifi==2025.11.12
 click==8.3.1
 colorama==0.4.6
@@ -19,6 +22,7 @@ httpx==0.28.1
 idna==3.11
 iniconfig==2.3.0
 Jinja2==3.1.6
+jmespath==1.0.1
 markdown-it-py==4.0.0
 MarkupSafe==3.0.3
 mccabe==0.7.0
@@ -35,6 +39,7 @@ pyflakes==3.4.0
 Pygments==2.19.2
 pymongo==4.15.5
 pytest==9.0.2
+python-dateutil==2.9.0.post0
 python-dotenv==1.2.1
 python-multipart==0.0.20
 pytokens==0.3.0
@@ -42,8 +47,10 @@ PyYAML==6.0.3
 rich==14.2.0
 rich-toolkit==0.17.0
 rignore==0.7.6
+s3transfer==0.16.0
 sentry-sdk==2.47.0
 shellingham==1.5.4
+six==1.17.0
 starlette==0.50.0
 typer==0.20.0
 typing-inspection==0.4.2
