@@ -31,19 +31,6 @@ class EmailNewsletter(BaseModel):
     email: str
 
 
-class ImageGroup(BaseModel):
-    title: str
-    description: str
-
-
-class ImageModel(BaseModel):
-    orignal_filename: str
-    url: str
-    asset_id: str
-    image_title: str
-    image_group_id: str
-
-
 class BlogPost(BaseModel):
     image_url: str
     category_id: str

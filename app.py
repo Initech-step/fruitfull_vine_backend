@@ -589,5 +589,6 @@ CONTACT US
 
 # Create
 
-# Read
+# Get all
 
+# Get one

@@ -8,7 +8,7 @@ from dotenv import load_dotenv
 load_dotenv() 
 
 # Access the environment variables
-test_mode = os.getenv("TEST", "True")
+test_mode = os.getenv("TEST", True)
 
 
 def connect_to_db() -> Dict[str, Any]:
