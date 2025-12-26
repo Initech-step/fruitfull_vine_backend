@@ -385,7 +385,7 @@ PRODUCTS
     status_code=status.HTTP_201_CREATED,
     response_model=dict
 )
-def create_product(product: BlogPost, token: str = Header()):
+def create_product(product: Product, token: str = Header()):
     VALIDATE_TOKEN(token)
     product_collection = database["products_collection"]
     product_collection.insert_one(product.model_dump())
@@ -395,16 +395,16 @@ def create_product(product: BlogPost, token: str = Header()):
 @app.post(
     "/api/edit_product/{b_id}", 
     status_code=status.HTTP_200_OK,
-    response_model=BlogPostOut
+    response_model=ProductOut
 )
 def edit_product(
-    blog_content: BlogPost, 
+    product_content: Product, 
     b_id: str, 
     token: str = Header()
 ):
     VALIDATE_TOKEN(token)
 
-    blog_data = blog_content.model_dump()
+    product_data = product_content.model_dump()
     product_collection = database["products_collection"]
     data_target = product_collection.find_one({"_id": ObjectId(b_id)})
     if data_target == None:
@@ -415,13 +415,13 @@ def edit_product(
         {"_id": ObjectId(b_id)},
         {
             "$set": {
-                "image_url": blog_data.get("image_url"),
-                "product_name": blog_data.get("product_name"),
-                "category_name": blog_data.get("category_name"),
-                "category_id": blog_data.get("category_id"),
-                "short_description": blog_data.get("short_description"),
-                "body": blog_data.get("body"),
-                "iframe": blog_data.get("iframe"),
+                "image_url": product_data.get("image_url"),
+                "product_name": product_data.get("product_name"),
+                "category_name": product_data.get("category_name"),
+                "category_id": product_data.get("category_id"),
+                "short_description": product_data.get("short_description"),
+                "body": product_data.get("body"),
+                "iframe": product_data.get("iframe"),
             }
         },
     )
@@ -433,7 +433,7 @@ def edit_product(
 @app.get(
     "/api/get_product/{b_id}", 
     status_code=status.HTTP_200_OK,
-    response_model=BlogPostOut
+    response_model=ProductOut
 )
 def get_product(b_id: str):
     product_collection = database["products_collection"]
@@ -450,7 +450,7 @@ def get_product(b_id: str):
 
 @app.get(
     "/api/get_products/",
-    response_model=BlogPostOutMultiple,
+    response_model=ProductMultiple,
 )
 def get_products(page: int = 1, limit: int = 15):
     product_collection = database["products_collection"]
@@ -485,7 +485,7 @@ def get_products(page: int = 1, limit: int = 15):
 
 @app.get(
     "/api/get_product_by_category/",
-    response_model=BlogPostOutMultiple,
+    response_model=ProductMultiple,
 )
 def get_product_by_category(
     category_id: str,
@@ -516,7 +516,7 @@ def get_product_by_category(
         blogs.append(doc)
         
     return {
-        "blogs": blogs,
+        "products": blogs,
         "pages": total_pages,
         "current_page": page
     }
@@ -540,7 +540,7 @@ def delete_product(b_id: str, token: str = Header()):
 
 @app.get(
     "/api/get_last_product/", 
-    response_model=BlogPostOut
+    response_model=ProductOut
 )
 def get_last_product():
     product_collection = database["products_collection"]
@@ -561,7 +561,7 @@ def get_last_product():
 
 @app.get(
     "/api/get_recent_product/",
-    response_model=BlogPostOutMultiple
+    response_model=ProductMultiple
 )
 def get_recent_products(limit: int = 3):
     product_collection = database["products_collection"]
@@ -573,13 +573,13 @@ def get_recent_products(limit: int = 3):
         .limit(limit)
     )
 
-    blogs = []
+    products = []
     for doc in cursor:
         doc["_id"] = str(doc["_id"])
-        blogs.append(doc)
+        products.append(doc)
 
     return {
-        "blogs": blogs
+        "products": products
     }
 
 

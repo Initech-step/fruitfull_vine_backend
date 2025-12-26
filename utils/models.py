@@ -110,4 +110,4 @@ class ProductOut(OutputModel):
 class ProductMultiple(BaseModel):
     current_page: int = 0
     pages: int = 0
-    blogs: list[ProductOut] = []
+    products: list[ProductOut] = []
