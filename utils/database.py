@@ -28,7 +28,9 @@ def connect_to_db() -> Dict[str, Any]:
             "admin_collection": db["Admin"],
             "blog_categories_collection": db["BlogCategories"],
             "blog_posts_collection": db["BlogPosts"],
-            "products_collection": db["Products"]
+            "products_collection": db["Products"],
+            "contact_collection": db["Contacts"]
+
         }
     except Exception as e:
         print(e)

@@ -5,6 +5,7 @@ from bson.objectid import ObjectId
 # from fastapi_pagination.ext.pymongo import paginate
 from typing import List
 import math
+from datetime import datetime
 from utils.database import connect_to_db
 from utils.models import (
     LogInDetails,
@@ -18,6 +19,9 @@ from utils.models import (
     ProductOut,
     ProductMultiple,
     EmailNewsletter,
+    ContactUs,
+    ContactOut,
+    ContactMultiple
 )
 
 # initialize app
@@ -586,9 +590,42 @@ def get_recent_products(limit: int = 3):
 """
 CONTACT US
 """
+@app.post(
+    "/api/contact/",
+    status_code=201,
+    response_model=dict
+)
+def create_contact(contact: ContactUs):
+    data = contact.model_dump()
+    data["created_at"] = datetime.utcnow()
+    contact_collection = database["contact_collection"]
+    contact_collection.insert_one(data)
+    return {"status": True}
 
-# Create
 
-# Get all
+@app.get(
+    "/api/contact/",
+    response_model=ContactMultiple
+)
+def get_all_contacts():
+    contact_collection = database["contact_collection"]
+    data = list(contact_collection.find({}).sort("created_at", -1))
+    return {
+        "current_page": 0,
+        "pages": 0,
+        "contacts": data
+    }
 
-# Get one
+
+@app.get(
+    "/api/contact/{contact_id}/",
+    response_model=ContactOut
+)
+def get_one_contact(contact_id: str):
+    contact_collection = database["contact_collection"]
+    contact = contact_collection.find_one({"_id": ObjectId(contact_id)})
+
+    if not contact:
+        raise HTTPException(status_code=404, detail="Contact not found")
+
+    return contact

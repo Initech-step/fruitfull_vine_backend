@@ -98,3 +98,22 @@ class ProductMultiple(BaseModel):
     current_page: int = 0
     pages: int = 0
     products: list[ProductOut] = []
+
+
+class ContactUs(BaseModel):
+    name: Optional[str]
+    email: Optional[str]
+    message: Optional[str]
+    phone_number: str
+
+class ContactOut(OutputModel):
+    name: Optional[str]
+    email: Optional[str]
+    message: Optional[str]
+    phone_number: str
+
+class ContactMultiple(BaseModel):
+    current_page: int = 0
+    pages: int = 0
+    contacts: list[ContactOut] = []
+    

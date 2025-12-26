@@ -21,7 +21,8 @@ def clean_collections():
     collections = [
         db["blog_categories_collection"],
         db["blog_posts_collection"],
-        db["products_collection"]
+        db["products_collection"],
+        db["contact_collection"]
     ]
 
     # before each test
