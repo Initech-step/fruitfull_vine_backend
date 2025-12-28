@@ -82,6 +82,25 @@ def test_products_setup():
 
     yield product_ids
 
+@pytest.fixture(scope="function")
+def test_contact():
+    db = connect_to_db()
+    contact_collection = db["contact_collection"]
+    # Insert a test contact
+    test_contact = {
+        "name": "Single User",
+        "email": "single@example.com",
+        "message": "Single fetch test",
+        "phone_number": "+2349282892"
+    }
+    contact_collection.insert_one(test_contact)
+
+    # get the contact and yield its ID for tests
+    contacts = list(contact_collection.find({}))
+    contact_ids = [str(contact["_id"]) for contact in contacts]
+
+    yield contact_ids
+
 @pytest.fixture(autouse=True)
 def clean_collections():
     db = connect_to_db()

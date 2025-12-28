@@ -15,3 +15,6 @@ to run products test
 
 to run blog tests
 >> python -m pytest tests/test_blog.py -s
+
+to run contact tests
+>> python -m pytest tests/test_contact.py -s

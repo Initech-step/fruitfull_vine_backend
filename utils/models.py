@@ -103,12 +103,14 @@ class ContactUs(BaseModel):
     email: Optional[str]
     message: Optional[str]
     phone_number: str
+    created_at: str = Field(default=str(date.today()))
 
 class ContactOut(OutputModel):
     name: Optional[str]
     email: Optional[str]
     message: Optional[str]
     phone_number: str
+    created_at: Optional[str] = None
 
 class ContactMultiple(BaseModel):
     current_page: int = 0

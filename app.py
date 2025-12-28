@@ -499,35 +499,10 @@ def edit_product(
     return data_output
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 """
 CONTACT US
 """
-# TODO: integrate newsletter along
 # TODO: PRODUCT Filtering by price or other stats
-
  
 @app.post(
     "/api/contact/",
@@ -536,7 +511,6 @@ CONTACT US
 )
 def create_contact(contact: ContactUs):
     data = contact.model_dump()
-    data["created_at"] = datetime.utcnow()
     contact_collection = database["contact_collection"]
     contact_collection.insert_one(data)
     return {"status": True}
@@ -549,12 +523,13 @@ def create_contact(contact: ContactUs):
 def get_all_contacts():
     contact_collection = database["contact_collection"]
     data = list(contact_collection.find({}).sort("created_at", -1))
+    for d in data:
+        d["_id"] = str(d["_id"])
     return {
         "current_page": 0,
         "pages": 0,
         "contacts": data
     }
-
 
 @app.get(
     "/api/contact/{contact_id}/",
@@ -563,8 +538,24 @@ def get_all_contacts():
 def get_one_contact(contact_id: str):
     contact_collection = database["contact_collection"]
     contact = contact_collection.find_one({"_id": ObjectId(contact_id)})
-
+    # convert id to str
+    contact["_id"] = str(contact["_id"])
     if not contact:
         raise HTTPException(status_code=404, detail="Contact not found")
 
     return contact
+
+@app.delete(
+    "/api/contact/{contact_id}/",
+    status_code=status.HTTP_200_OK
+)
+def delete_contact(contact_id: str, token: str = Header()):
+    VALIDATE_TOKEN(token)
+    contact_collection = database["contact_collection"]
+    data = contact_collection.find_one({"_id": ObjectId(contact_id)})
+    if data == None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Resource not found"
+        )
+    contact_collection.delete_one(data)
+    return {"status": True}
