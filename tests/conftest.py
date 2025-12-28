@@ -19,7 +19,7 @@ def admin_token():
 def clean_collections():
     db = connect_to_db()
     collections = [
-        db["blog_categories_collection"],
+        db["categories_collection"],
         db["blog_posts_collection"],
         db["products_collection"],
         db["contact_collection"]

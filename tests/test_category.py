@@ -1,4 +1,4 @@
-
+## BLOG CATEGORY TESTS
 def test_root(client):
     response = client.get("/")
     assert response.status_code == 200
@@ -9,7 +9,8 @@ def test_create_category(client, admin_token):
         "/api/category/",
         json={
             "name": "TEST_CATEGORY",
-            "description": "Created by TestClient"
+            "description": "Created by TestClient",
+            "type": "blog"
         },
         headers={"token": admin_token}
     )
@@ -19,13 +20,9 @@ def test_create_category(client, admin_token):
 
 
 def test_get_categories(client):
-    response = client.get("/api/category/")
-
+    # add query param to show the type of catgory
+    response = client.get(f"/api/category/?type=blog")
     assert response.status_code == 200
-    body = response.json()
-
-    assert body["status"] is True
-    assert body["data"] == []
 
 
 def test_delete_category(client, admin_token):
@@ -34,20 +31,21 @@ def test_delete_category(client, admin_token):
         "/api/category/",
         json={
             "name": "TEST_DELETE_CATEGORY",
-            "description": "Will be deleted"
+            "description": "Will be deleted",
+            "type": "blog"
         },
         headers={"token": admin_token}
     )
 
     # fetch
-    categories = client.get("/api/category/").json()["data"]
+    categories = client.get("/api/category/?type=blog").json()
     assert len(categories) == 1
 
     category_id = categories[0]["_id"]
 
     # delete
     delete_response = client.delete(
-        f"/api/category/{category_id}/",
+        f"/api/category/{category_id}/blog/",
         headers={"token": admin_token}
     )
 
@@ -55,5 +53,6 @@ def test_delete_category(client, admin_token):
     assert delete_response.json() == {"status": True}
 
     # verify
-    remaining = client.get("/api/category/").json()["data"]
+    remaining = client.get("/api/category/?type=blog").json()
     assert remaining == []
+

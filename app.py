@@ -14,14 +14,14 @@ from utils.models import (
     BlogPost,
     BlogPostOut,
     BlogPostOutMultiple,
-    Admin,
     Product,
     ProductOut,
     ProductMultiple,
     EmailNewsletter,
     ContactUs,
     ContactOut,
-    ContactMultiple
+    ContactMultiple,
+    CategoryType
 )
 
 # initialize app
@@ -87,11 +87,9 @@ def login_admin(login: LogInDetails):
 def root():
     return {"message": "Hello Fruitful Vine!"}
 
-
 """
 CATEGORY APIS
 """
-
 
 @app.post(
     "/api/category/", 
@@ -101,11 +99,12 @@ CATEGORY APIS
 def create_category(category: Category, token: str = Header()):
     if VALIDATE_TOKEN(token):
         category_data = category.model_dump()
-        category_collection = database['blog_categories_collection']
+        category_collection = database['categories_collection']
         try:
             category_collection.insert_one(category_data)
             return {"status": True}
-        except:
+        except Exception as e:
+            print(e)
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail="Failed to create catgory",
@@ -115,28 +114,54 @@ def create_category(category: Category, token: str = Header()):
     "/api/category/", 
     response_model=List[CategoryOut]
 )
-def get_categories():
-    category_collection = database['blog_categories_collection']
-    data = list(category_collection.find({}))
+def get_categories(type:CategoryType = CategoryType.product):
+    category_collection = database['categories_collection']
+    data = list(category_collection.find({"type": type.value}))
     for d in data:
         d["_id"] = str(d["_id"])
     return data
 
 
 @app.delete(
-    "/api/category/{c_id}/", 
+    "/api/category/{c_id}/{type}/", 
     status_code=status.HTTP_200_OK,
     response_model=dict
 )
-def delete_category(c_id: str, token: str = Header()):
+def delete_category(
+    c_id: str, 
+    type: CategoryType = CategoryType.product, 
+    token: str = Header()
+):
     if VALIDATE_TOKEN(token):
-        category_collection = database['blog_categories_collection']
-        data = category_collection.find_one({"_id": ObjectId(c_id)})
-        if data == None:
+        # find and verify category
+        category_collection = database['categories_collection']
+        category_data = category_collection.find_one({"_id": ObjectId(c_id)})
+        if category_data == None:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND, detail="Resource not found"
             )
-        category_collection.delete_one(data)
+        # check if linked to any products or blog posts
+        if type == CategoryType.product:
+            product_collection = database['products_collection']
+            if product_collection.find_one({"category_id": ObjectId(c_id)}) is not None:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Category is linked to a product",
+                )
+            else:
+                category_collection.delete_one({"_id": ObjectId(c_id)})
+
+        if type == CategoryType.blog:
+            # get the needed collections
+            blog_posts_collection = database['blog_posts_collection']
+            if blog_posts_collection.find_one({"category_id": ObjectId(c_id)}) is not None:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Category is linked to a blog post",
+                )
+            else:
+                category_collection.delete_one({"_id": ObjectId(c_id)})
+            
         return {"status": True}
 
 @app.put(
@@ -165,6 +190,16 @@ def update_category(c_id: str, category: Category, token: str = Header()):
         },
     )
     return {"status": True}
+
+
+
+
+
+
+
+
+
+
 
 
 """
@@ -590,6 +625,10 @@ def get_recent_products(limit: int = 3):
 """
 CONTACT US
 """
+# TODO: integrate newsletter along
+# TODO: PRODUCT Filtering by price or other stats
+
+ 
 @app.post(
     "/api/contact/",
     status_code=201,

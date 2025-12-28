@@ -9,28 +9,25 @@ load_dotenv()
 
 # Access the environment variables
 test_mode = os.getenv("TEST", True)
-
+username = os.getenv("ATLAS_USERNAME")
+pword = os.getenv("PWORD")
 
 def connect_to_db() -> Dict[str, Any]:
-    username = "Project-AI"
-    pword = "m5vr23zThUdemscI"
     uri = f"mongodb+srv://{username}:{pword}@atlascluster.doihstd.mongodb.net/?appName=AtlasCluster"
     client = MongoClient(uri, server_api=ServerApi("1"))
     # Send a ping to confirm a successful connection
     try:
         client.admin.command("ping")
-        print("Pinged your deployment. You successfully connected to MongoDB!")
         if test_mode:
             db = client["TestFruitfulVine"]
         else:
             db = client["FruitfulVine"]
         return {
             "admin_collection": db["Admin"],
-            "blog_categories_collection": db["BlogCategories"],
+            "categories_collection": db["Categories"],
             "blog_posts_collection": db["BlogPosts"],
             "products_collection": db["Products"],
             "contact_collection": db["Contacts"]
-
         }
     except Exception as e:
         print(e)

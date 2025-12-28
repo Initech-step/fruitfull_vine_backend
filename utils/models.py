@@ -17,14 +17,14 @@ class CategoryType(Enum):
 # specific models
 class Category(BaseModel):
     name: str
-    type: str = CategoryType.product.value
+    type: str # should be either 'product' or 'blog'
     description: str
 
 
 class CategoryOut(OutputModel):
     name: str
     description: str
-    type: str = CategoryType.product.value
+    type: str
 
 
 class EmailNewsletter(BaseModel):
