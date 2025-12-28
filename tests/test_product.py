@@ -1,18 +1,18 @@
 
 
-def test_create_blog_post(client, admin_token):
+def test_create_product(client, admin_token):
     payload = {
         "image_url": "https://example.com/image.jpg",
-        "category_id": "cat-001",
+        "category_id": "prodcat1",
         "category_name": "Tech",
-        "post_title": "Test Blog Post",
-        "short_title": "Test Blog",
-        "body": "This is a test blog body",
+        "product_name": "Test Product",
+        "short_description": "Test Product",
+        "body": "This is a test product body",
         "iframe": "www.whatever.com"
     }
 
     response = client.post(
-        "/api/blog/",
+        "/api/product/",
         json=payload,
         headers={"token": admin_token}
     )
@@ -20,57 +20,50 @@ def test_create_blog_post(client, admin_token):
     assert response.status_code == 201
     assert response.json() == {"status": True}
 
-def test_get_blog_posts(client, test_blog_posts_setup):
-    response = client.get("/api/blog/?page=1&limit=15")
+def test_get_products(client, test_products_setup):
+    response = client.get("/api/products/?page=1&limit=15")
     assert response.status_code == 200
 
     body = response.json()
 
     assert "current_page" in body
     assert "pages" in body
-    assert "blogs" in body
-    assert isinstance(body["blogs"], list)
+    assert "products" in body
+    assert isinstance(body["products"], list)
 
-def test_blog_post_schema(client, test_blog_posts_setup):
-    response = client.get("/api/blog/?page=1&limit=15")
-    blogs = response.json()["blogs"]
+def test_get_products_by_category(client, test_products_setup):
+    response = client.get("/api/products/?page=1&limit=15&category_id=prodcat1/")
+    assert response.status_code == 200
 
-    if not blogs:
+    body = response.json()
+
+    assert "current_page" in body
+    assert "pages" in body
+    assert "products" in body
+    assert isinstance(body["products"], list)
+
+    for product in body["products"]:
+        assert product["category_id"].lower() == "prodcat1"
+
+def test_product_schema(client, test_products_setup):
+    response = client.get(f"/api/product/{test_products_setup[0]}/")
+    product = response.json()
+    if not product:
         return  # allow empty DB
+    
+    assert "_id" in product
+    assert isinstance(product["_id"], str)
 
-    blog = blogs[0]
+    assert "image_url" in product
+    assert "category_id" in product
+    assert "category_name" in product
+    assert "product_name" in product
+    assert "short_description" in product
+    assert "date" in product
+    assert "iframe" in product
 
-    assert "_id" in blog
-    assert isinstance(blog["_id"], str)
-
-    assert "image_url" in blog
-    assert "category_id" in blog
-    assert "category_name" in blog
-    assert "post_title" in blog
-    assert "short_title" in blog
-    assert "body" in blog
-    assert "date" in blog
-    assert "iframe" in blog
-
-def test_get_single_blog_post(client, test_blog_posts_setup):
-    response = client.get(f"/api/blog/{test_blog_posts_setup[0]}/")
-    assert response.status_code == 200
-
-    body = response.json()
-    assert "_id" in body
-    assert isinstance(body["_id"], str)
-
-    assert "image_url" in body
-    assert "category_id" in body
-    assert "category_name" in body
-    assert "post_title" in body
-    assert "short_title" in body
-    assert "body" in body
-    assert "date" in body
-    assert "iframe" in body
-
-def test_get_last_blog_post(client, test_blog_posts_setup):
-    response = client.get("/api/get_last_post/")
+def test_get_last_product(client, test_products_setup):
+    response = client.get("/api/get_last_product/")
     assert response.status_code == 200
 
     body = response.json()
@@ -79,34 +72,19 @@ def test_get_last_blog_post(client, test_blog_posts_setup):
     assert "image_url" in body
     assert "category_id" in body
     assert "category_name" in body
-    assert "post_title" in body
-    assert "short_title" in body
+    assert "product_name" in body
+    assert "short_description" in body
     assert "body" in body
     assert "date" in body
     assert "iframe" in body
 
-def test_delete_blog_post(client, admin_token, test_blog_posts_setup):
+def test_delete_product(client, admin_token, test_products_setup):
     # Delete
     delete_response = client.delete(
-        f"/api/blog/{test_blog_posts_setup[0]}/",
+        f"/api/product/{test_products_setup[0]}/",
         headers={"token": admin_token}
     )
 
     assert delete_response.status_code == 200
     assert delete_response.json() == {"status": True}
-
-# get blog posts by category
-def test_get_blog_posts_by_category(client, test_blog_posts_setup):
-    response = client.get("/api/blog/?page=1&limit=15&category_id=cat1/")
-    assert response.status_code == 200
-
-    body = response.json()
-
-    assert "current_page" in body
-    assert "pages" in body
-    assert "blogs" in body
-    assert isinstance(body["blogs"], list)
-
-    for blog in body["blogs"]:
-        assert blog["category_id"].lower() == "cat1"
-
+    

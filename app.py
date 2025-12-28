@@ -363,6 +363,103 @@ def create_product(product: Product, token: str = Header()):
     product_collection.insert_one(product.model_dump())
     return {"status": True}
 
+@app.get(
+    "/api/products/",
+    response_model=ProductMultiple,
+)
+def get_products(
+    page: int = 1, 
+    limit: int = 15,
+    category_id: Optional[str] = None
+):
+    product_collection = database["products_collection"]
+
+    # guardrails
+    page = max(page, 1)
+    limit = min(max(limit, 1), 50)
+    skip = (page - 1) * limit
+
+    total_docs = product_collection.count_documents({})
+    total_pages = math.ceil(total_docs / limit)
+
+    cursor = (
+        product_collection
+        .find({})
+        .sort("_id", -1)
+        .skip(skip)
+        .limit(limit)
+    )
+    if category_id is not None:
+        cursor = (
+            product_collection
+            .find({"category_id": category_id})
+            .sort("_id", -1)    
+            .skip(skip)
+            .limit(limit)
+        )
+
+    blogs = []
+    for doc in cursor:
+        doc["_id"] = str(doc["_id"])
+        blogs.append(doc)
+        
+    return {
+        "blogs": blogs,
+        "pages": total_pages,
+        "current_page": page
+    }
+
+@app.get(
+    "/api/product/{p_id}/", 
+    status_code=status.HTTP_200_OK,
+    response_model=ProductOut
+)
+def get_product(p_id: str):
+    product_collection = database["products_collection"]
+    data_target = product_collection.find_one({"_id": ObjectId(p_id)})
+    data_target["_id"] = str(data_target["_id"])
+
+    if data_target == None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Resource not found"
+        )
+    
+    return data_target
+
+@app.get(
+    "/api/get_last_product/", 
+    response_model=ProductOut
+)
+def get_last_product():
+    product_collection = database["products_collection"]
+    last_post = product_collection.find_one(
+        {},
+        sort=[("_id", -1)]
+    )
+
+    if not last_post:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="No blog posts found"
+        )
+
+    last_post["_id"] = str(last_post["_id"])
+    return last_post
+
+@app.delete(
+    "/api/product/{p_id}/",
+    status_code=status.HTTP_200_OK
+)
+def delete_product(p_id: str, token: str = Header()):
+    VALIDATE_TOKEN(token)
+    product_collection = database["products_collection"]
+    data = product_collection.find_one({"_id": ObjectId(p_id)})
+    if data == None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Resource not found"
+        )
+    product_collection.delete_one(data)
+    return {"status": True}
 
 @app.post(
     "/api/edit_product/{b_id}", 
@@ -401,95 +498,6 @@ def edit_product(
     data_output["_id"] = str(data_output["_id"])
     return data_output
 
-
-@app.get(
-    "/api/get_product/{b_id}", 
-    status_code=status.HTTP_200_OK,
-    response_model=ProductOut
-)
-def get_product(b_id: str):
-    product_collection = database["products_collection"]
-    data_target = product_collection.find_one({"_id": ObjectId(b_id)})
-    data_target["_id"] = str(data_target["_id"])
-
-    if data_target == None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Resource not found"
-        )
-    
-    return data_target
-
-
-@app.get(
-    "/api/get_products/",
-    response_model=ProductMultiple,
-)
-def get_products(page: int = 1, limit: int = 15):
-    product_collection = database["products_collection"]
-
-    # guardrails
-    page = max(page, 1)
-    limit = min(max(limit, 1), 50)
-    skip = (page - 1) * limit
-
-    total_docs = product_collection.count_documents({})
-    total_pages = math.ceil(total_docs / limit)
-
-    cursor = (
-        product_collection
-        .find({})
-        .sort("_id", -1)
-        .skip(skip)
-        .limit(limit)
-    )
-
-    blogs = []
-    for doc in cursor:
-        doc["_id"] = str(doc["_id"])
-        blogs.append(doc)
-        
-    return {
-        "blogs": blogs,
-        "pages": total_pages,
-        "current_page": page
-    }
-
-
-@app.delete(
-    "/api/del_product/{b_id}/",
-    status_code=status.HTTP_200_OK
-)
-def delete_product(b_id: str, token: str = Header()):
-    VALIDATE_TOKEN(token)
-    product_collection = database["products_collection"]
-    data = product_collection.find_one({"_id": ObjectId(b_id)})
-    if data == None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Resource not found"
-        )
-    product_collection.delete_one(data)
-    return {"status": True}
-
-
-@app.get(
-    "/api/get_last_product/", 
-    response_model=ProductOut
-)
-def get_last_product():
-    product_collection = database["products_collection"]
-    last_post = product_collection.find_one(
-        {},
-        sort=[("_id", -1)]
-    )
-
-    if not last_post:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="No blog posts found"
-        )
-
-    last_post["_id"] = str(last_post["_id"])
-    return last_post
 
 
 

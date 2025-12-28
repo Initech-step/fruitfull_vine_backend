@@ -46,8 +46,41 @@ def test_blog_posts_setup():
     # get blog posts and yield their IDs for tests
     blog_posts = list(blog_posts_collection.find({}))
     store_ids = [str(post["_id"]) for post in blog_posts]
-    
+
     yield store_ids
+
+@pytest.fixture(scope="function")
+def test_products_setup():
+    db = connect_to_db()
+    products_collection = db["products_collection"]
+    # Insert test products
+    test_products = [
+        {
+            "image_url": "https://example.com/product1.jpg",
+            "category_id": "prodcat1",
+            "category_name": "Product Category 1",
+            "product_name": "Test Product 1",
+            "short_description": "Short description of Test Product 1",
+            "body": "This is the body of test product 1",
+            "iframe": "www.product1.com"
+        },
+        {
+            "image_url": "https://example.com/product2.jpg",
+            "category_id": "prodcat2",
+            "category_name": "Product Category 2",
+            "product_name": "Test Product 2",
+            "short_description": "Short description of Test Product 2",
+            "body": "This is the body of test product 2",
+            "iframe": "www.product2.com"
+        },
+    ]
+    products_collection.insert_many(test_products)
+    
+    # get products and yield their IDs for tests
+    products = list(products_collection.find({}))
+    product_ids = [str(product["_id"]) for product in products]
+
+    yield product_ids
 
 @pytest.fixture(autouse=True)
 def clean_collections():
