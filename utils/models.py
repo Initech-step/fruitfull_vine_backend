@@ -59,7 +59,6 @@ class BlogPostOutMultiple(BaseModel):
     blogs: list[BlogPostOut] = []
 
 
-
 class Admin(BaseModel):
     email: str
     password: str
@@ -69,7 +68,6 @@ class Admin(BaseModel):
 class LogInDetails(BaseModel):
     email: str
     password: str
-
 
 
 class Product(BaseModel):

@@ -1,9 +1,7 @@
 from fastapi import FastAPI, HTTPException, status, Request, Response, Header
 from fastapi.middleware.cors import CORSMiddleware
 from bson.objectid import ObjectId
-# from fastapi_pagination import Page, add_pagination
-# from fastapi_pagination.ext.pymongo import paginate
-from typing import List
+from typing import List, Optional
 import math
 from datetime import datetime
 from utils.database import connect_to_db
@@ -192,16 +190,6 @@ def update_category(c_id: str, category: Category, token: str = Header()):
     return {"status": True}
 
 
-
-
-
-
-
-
-
-
-
-
 """
  BLOG APIS
 """
@@ -220,8 +208,8 @@ def create_blog(blog: BlogPost, token: str = Header()):
     return {"status": True}
 
 
-@app.post(
-    "/api/edit_blog_content/{b_id}", 
+@app.put(
+    "/api/blog/{b_id}/", 
     status_code=status.HTTP_200_OK,
     response_model=BlogPostOut
 )
@@ -257,10 +245,54 @@ def edit_blog_content(
     data_output["_id"] = str(data_output["_id"])
     return data_output
 
+# GET ALL BLOG CONTENTS
+@app.get(
+    "/api/blog/",
+    response_model=BlogPostOutMultiple,
+)
+def get_blog_posts(
+    page: int = 1, 
+    limit: int = 15,
+    category_id: Optional[str] = None
+):
+    blog_collection = database["blog_posts_collection"]
+    # guardrails
+    page = max(page, 1)
+    limit = min(max(limit, 1), 50)
+    skip = (page - 1) * limit
+    total_docs = blog_collection.count_documents({})
+    total_pages = math.ceil(total_docs / limit)
+
+    cursor = (
+            blog_collection
+            .find({})
+            .sort("_id", -1)
+            .skip(skip)
+            .limit(limit)
+        )
+    if category_id is not None:
+        cursor = (
+            blog_collection
+            .find({"category_id": category_id})
+            .sort("_id", -1)
+            .skip(skip)
+            .limit(limit)
+        )
+ 
+    blogs = []
+    for doc in cursor:
+        doc["_id"] = str(doc["_id"])
+        blogs.append(doc)
+        
+    return {
+        "blogs": blogs,
+        "pages": total_pages,
+        "current_page": page
+    }
 
 # GET SPECIFIC BLOG POST
 @app.get(
-    "/api/get_blog_content/{b_id}", 
+    "/api/blog/{b_id}/", 
     status_code=status.HTTP_200_OK,
     response_model=BlogPostOut
 )
@@ -276,85 +308,9 @@ def get_blog_content(b_id: str):
     
     return data_target
 
-
-# GET ALL BLOG CONTENTS
-@app.get(
-    "/api/get_blog_posts/",
-    response_model=BlogPostOutMultiple,
-)
-def get_blog_posts(page: int = 1, limit: int = 15):
-    blog_collection = database["blog_posts_collection"]
-
-    # guardrails
-    page = max(page, 1)
-    limit = min(max(limit, 1), 50)
-    skip = (page - 1) * limit
-
-    total_docs = blog_collection.count_documents({})
-    total_pages = math.ceil(total_docs / limit)
-
-    cursor = (
-        blog_collection
-        .find({})
-        .sort("_id", -1)
-        .skip(skip)
-        .limit(limit)
-    )
-
-    blogs = []
-    for doc in cursor:
-        doc["_id"] = str(doc["_id"])
-        blogs.append(doc)
-        
-    return {
-        "blogs": blogs,
-        "pages": total_pages,
-        "current_page": page
-    }
-
-
-@app.get(
-    "/api/get_blog_posts_by_category/",
-    response_model=BlogPostOutMultiple,
-)
-def get_blog_posts_by_category(
-    category_id: str,
-    page: int = 1, 
-    limit: int = 15
-):
-    blog_collection = database["blog_posts_collection"]
-
-    # guardrails
-    page = max(page, 1)
-    limit = min(max(limit, 1), 50)
-    skip = (page - 1) * limit
-
-    total_docs = blog_collection.count_documents({})
-    total_pages = math.ceil(total_docs / limit)
-
-    cursor = (
-        blog_collection
-        .find({"category_id":str(category_id)})
-        .sort("_id", -1)
-        .skip(skip)
-        .limit(limit)
-    )
-
-    blogs = []
-    for doc in cursor:
-        doc["_id"] = str(doc["_id"])
-        blogs.append(doc)
-        
-    return {
-        "blogs": blogs,
-        "pages": total_pages,
-        "current_page": page
-    }
-
-
 # DELETE blog CONTENT
 @app.delete(
-    "/api/del_blog_post/{b_id}/",
+    "/api/blog/{b_id}/",
     status_code=status.HTTP_200_OK
 )
 def delete_blog_post(b_id: str, token: str = Header()):
@@ -391,33 +347,10 @@ def get_last_post():
     return last_post
 
 
-@app.get(
-    "/api/get_recent_posts/",
-    response_model=BlogPostOutMultiple
-)
-def get_recent_posts(limit: int = 3):
-    blog_collection = database["blog_posts_collection"]
-
-    cursor = (
-        blog_collection
-        .find({})
-        .sort("_id", -1)
-        .limit(limit)
-    )
-
-    blogs = []
-    for doc in cursor:
-        doc["_id"] = str(doc["_id"])
-        blogs.append(doc)
-
-    return {
-        "blogs": blogs
-    }
-
-
 """
 PRODUCTS
 """
+
 
 @app.post(
     "/api/product/",
@@ -522,45 +455,6 @@ def get_products(page: int = 1, limit: int = 15):
     }
 
 
-@app.get(
-    "/api/get_product_by_category/",
-    response_model=ProductMultiple,
-)
-def get_product_by_category(
-    category_id: str,
-    page: int = 1, 
-    limit: int = 15
-):
-    product_collection = database["products_collection"]
-
-    # guardrails
-    page = max(page, 1)
-    limit = min(max(limit, 1), 50)
-    skip = (page - 1) * limit
-
-    total_docs = product_collection.count_documents({})
-    total_pages = math.ceil(total_docs / limit)
-
-    cursor = (
-        product_collection
-        .find({"category_id":str(category_id)})
-        .sort("_id", -1)
-        .skip(skip)
-        .limit(limit)
-    )
-
-    blogs = []
-    for doc in cursor:
-        doc["_id"] = str(doc["_id"])
-        blogs.append(doc)
-        
-    return {
-        "products": blogs,
-        "pages": total_pages,
-        "current_page": page
-    }
-
-
 @app.delete(
     "/api/del_product/{b_id}/",
     status_code=status.HTTP_200_OK
@@ -598,28 +492,26 @@ def get_last_product():
     return last_post
 
 
-@app.get(
-    "/api/get_recent_product/",
-    response_model=ProductMultiple
-)
-def get_recent_products(limit: int = 3):
-    product_collection = database["products_collection"]
 
-    cursor = (
-        product_collection
-        .find({})
-        .sort("_id", -1)
-        .limit(limit)
-    )
 
-    products = []
-    for doc in cursor:
-        doc["_id"] = str(doc["_id"])
-        products.append(doc)
 
-    return {
-        "products": products
-    }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 """
