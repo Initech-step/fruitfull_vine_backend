@@ -11,6 +11,7 @@ load_dotenv()
 test_mode = os.getenv("TEST", True)
 username = os.getenv("ATLAS_USERNAME")
 pword = os.getenv("PWORD")
+offline = os.getenv("OFFLINE_MODE", False)
 
 def connect_to_db() -> Dict[str, Any]:
     uri = f"mongodb+srv://{username}:{pword}@atlascluster.doihstd.mongodb.net/?appName=AtlasCluster"
@@ -22,6 +23,7 @@ def connect_to_db() -> Dict[str, Any]:
             db = client["TestFruitfulVine"]
         else:
             db = client["FruitfulVine"]
+        print("Connected to MongoDB successfully.")
         return {
             "admin_collection": db["Admin"],
             "categories_collection": db["Categories"],
@@ -31,4 +33,5 @@ def connect_to_db() -> Dict[str, Any]:
         }
     except Exception as e:
         print(e)
+        print("\n Switched to OFFLINE_MODE due to database connection failure. \n")
         return {}

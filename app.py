@@ -21,12 +21,13 @@ from utils.models import (
     ContactMultiple,
     CategoryType
 )
+import os
 
 # initialize app
 app = FastAPI()
 
 """SET UP CORS"""
-origins = ["http://localhost:5173"]
+origins = ["http://localhost:3000"]
 app.add_middleware(
     CORSMiddleware,
     allow_origins=origins,
@@ -36,6 +37,9 @@ app.add_middleware(
 )
 
 database = connect_to_db()
+offline = os.getenv("OFFLINE_MODE", False)
+print(f"\n OFFLINE MODE: {offline} \n")
+print(type(offline))
 PAGINATION_PER_PAGE = 10
 
 # auth helpers
@@ -95,6 +99,10 @@ CATEGORY APIS
     response_model=dict
 )
 def create_category(category: Category, token: str = Header()):
+    if offline:
+        print("Offline mode: skipping category creation")
+        return {"status": True}
+    
     if VALIDATE_TOKEN(token):
         category_data = category.model_dump()
         category_collection = database['categories_collection']
@@ -113,6 +121,27 @@ def create_category(category: Category, token: str = Header()):
     response_model=List[CategoryOut]
 )
 def get_categories(type:CategoryType = CategoryType.product):
+    if offline:
+        return [
+            {
+                "_id" : "64b8f4f2f2f2f2f2f2f2f2f2",
+                "name": "Sample Category",
+                "type": type.value,
+                "description": "This is a sample category description.",
+            },
+            {
+                "_id" : "ofiolnbkcr",
+                "name": "Sample Category 2",
+                "type": type.value,
+                "description": "This is a sample category description.",
+            },
+            {
+                "_id" : "k2i39i0r392ir8439",
+                "name": "Sample Category 3",
+                "type": type.value,
+                "description": "This is a sample category description.",
+            },
+        ]
     category_collection = database['categories_collection']
     data = list(category_collection.find({"type": type.value}))
     for d in data:
@@ -130,6 +159,9 @@ def delete_category(
     type: CategoryType = CategoryType.product, 
     token: str = Header()
 ):
+    if offline:
+        return {"status": True}
+    
     if VALIDATE_TOKEN(token):
         # find and verify category
         category_collection = database['categories_collection']
@@ -168,6 +200,8 @@ def delete_category(
     response_model=dict
 )
 def update_category(c_id: str, category: Category, token: str = Header()):
+    if offline:
+        return {"status": True}
     VALIDATE_TOKEN(token)
 
     category_data = category.model_dump()
@@ -201,6 +235,8 @@ def update_category(c_id: str, category: Category, token: str = Header()):
     response_model=dict
 )
 def create_blog(blog: BlogPost, token: str = Header()):
+    if offline:
+        return {"status": True}
     VALIDATE_TOKEN(token)
     blog_collection = database["blog_posts_collection"]
     blog_collection.insert_one(blog.model_dump())
@@ -218,6 +254,17 @@ def edit_blog_content(
     b_id: str, 
     token: str = Header()
 ):
+    if offline:
+        return {
+            "_id": "k2i39i0r392ir8439", 
+            "image_url": "https://example.com/image.jpg",
+            "post_title": "Sample Post Title",
+            "category_name": "Sample Category",
+            "category_id": "sample_category_id",
+            "short_title": "Sample Short Title",
+            "body": "Sample blog post body content.",
+            "iframe": "<iframe src='https://example.com'></iframe>",
+        }
     VALIDATE_TOKEN(token)
 
     blog_data = blog_content.model_dump()
@@ -255,6 +302,33 @@ def get_blog_posts(
     limit: int = 15,
     category_id: Optional[str] = None
 ):
+    if offline:
+        return {
+            "blogs": [
+                {
+                    "_id": "k2i39i0r392ir8439", 
+                    "image_url": "https://example.com/image.jpg",
+                    "post_title": "Sample Post Title",
+                    "category_name": "Sample Category",
+                    "category_id": "sample_category_id",
+                    "short_title": "Sample Short Title",
+                    "body": "Sample blog post body content.",
+                    "iframe": "<iframe src='https://example.com'></iframe>",
+                },
+                {
+                    "_id": "oi23j4oij234oij234", 
+                    "image_url": "https://example.com/image2.jpg",
+                    "post_title": "Another Sample Post Title",
+                    "category_name": "Another Sample Category",
+                    "category_id": "another_sample_category_id",
+                    "short_title": "Another Sample Short Title",
+                    "body": "Another sample blog post body content.",
+                    "iframe": "<iframe src='https://example.com'></iframe>",
+                }
+            ],
+            "pages": 1,
+            "current_page": 1
+        }
     blog_collection = database["blog_posts_collection"]
     # guardrails
     page = max(page, 1)
@@ -297,6 +371,17 @@ def get_blog_posts(
     response_model=BlogPostOut
 )
 def get_blog_content(b_id: str):
+    if offline:
+        return {
+            "_id": "k2i39i0r392ir8439", 
+            "image_url": "https://example.com/image.jpg",
+            "post_title": "Sample Post Title",
+            "category_name": "Sample Category",
+            "category_id": "sample_category_id",
+            "short_title": "Sample Short Title",
+            "body": "Sample blog post body content.",
+            "iframe": "<iframe src='https://example.com'></iframe>",
+        }
     blog_collection = database["blog_posts_collection"]
     data_target = blog_collection.find_one({"_id": ObjectId(b_id)})
     data_target["_id"] = str(data_target["_id"])
@@ -314,6 +399,8 @@ def get_blog_content(b_id: str):
     status_code=status.HTTP_200_OK
 )
 def delete_blog_post(b_id: str, token: str = Header()):
+    if offline:
+        return {"status": True}
     VALIDATE_TOKEN(token)
     blog_collection = database["blog_posts_collection"]
     data = blog_collection.find_one({"_id": ObjectId(b_id)})
@@ -331,6 +418,17 @@ def delete_blog_post(b_id: str, token: str = Header()):
     response_model=BlogPostOut
 )
 def get_last_post():
+    if offline:
+        return {
+            "_id": "k2i39i0r392ir8439", 
+            "image_url": "https://example.com/image.jpg",
+            "post_title": "Sample Post Title",
+            "category_name": "Sample Category",
+            "category_id": "sample_category_id",
+            "short_title": "Sample Short Title",
+            "body": "Sample blog post body content.",
+            "iframe": "<iframe src='https://example.com'></iframe>",
+        }
     blog_collection = database["blog_posts_collection"]
     last_post = blog_collection.find_one(
         {},
@@ -358,6 +456,8 @@ PRODUCTS
     response_model=dict
 )
 def create_product(product: Product, token: str = Header()):
+    if offline:
+        return {"status": True}
     VALIDATE_TOKEN(token)
     product_collection = database["products_collection"]
     product_collection.insert_one(product.model_dump())
@@ -372,6 +472,33 @@ def get_products(
     limit: int = 15,
     category_id: Optional[str] = None
 ):
+    if offline:
+        return {
+            "products": [
+                {
+                    "_id": "k2i39i0r392ir8439", 
+                    "image_url": "https://example.com/image.jpg",
+                    "product_name": "Sample Product Name",
+                    "category_name": "Sample Category",
+                    "category_id": "sample_category_id",
+                    "short_description": "Sample short description of the product.",
+                    "body": "Detailed description of the sample product.",
+                    "iframe": "<iframe src='https://example.com'></iframe>",
+                },
+                {
+                    "_id": "oi23j4oij234oij234", 
+                    "image_url": "https://example.com/image2.jpg",
+                    "product_name": "Another Sample Product Name",
+                    "category_name": "Another Sample Category",
+                    "category_id": "another_sample_category_id",
+                    "short_description": "Another sample short description of the product.",
+                    "body": "Detailed description of another sample product.",
+                }
+            ],
+            "pages": 1,
+            "current_page": 1
+        }
+
     product_collection = database["products_collection"]
 
     # guardrails
@@ -415,6 +542,17 @@ def get_products(
     response_model=ProductOut
 )
 def get_product(p_id: str):
+    if offline:
+        return {
+            "_id": "k2i39i0r392irrr8439", 
+            "image_url": "https://example.com/image.jpg",
+            "product_name": "Sample Product Name",
+            "category_name": "Sample Category",
+            "category_id": "sample_category_id",
+            "short_description": "Sample short description of the product.",
+            "body": "Detailed description of the sample product.",
+            "iframe": "<iframe src='https://example.com'></iframe>",
+        }
     product_collection = database["products_collection"]
     data_target = product_collection.find_one({"_id": ObjectId(p_id)})
     data_target["_id"] = str(data_target["_id"])
@@ -431,6 +569,17 @@ def get_product(p_id: str):
     response_model=ProductOut
 )
 def get_last_product():
+    if offline:
+        return {
+            "_id": "k2i39i0r392irrr8439", 
+            "image_url": "https://example.com/image.jpg",
+            "product_name": "Sample Product Name",
+            "category_name": "Sample Category",
+            "category_id": "sample_category_id",
+            "short_description": "Sample short description of the product.",
+            "body": "Detailed description of the sample product.",
+            "iframe": "<iframe src='https://example.com'></iframe>",
+        }
     product_collection = database["products_collection"]
     last_post = product_collection.find_one(
         {},
@@ -451,6 +600,9 @@ def get_last_product():
     status_code=status.HTTP_200_OK
 )
 def delete_product(p_id: str, token: str = Header()):
+    if offline:
+        return {"status": True}
+    
     VALIDATE_TOKEN(token)
     product_collection = database["products_collection"]
     data = product_collection.find_one({"_id": ObjectId(p_id)})
@@ -471,6 +623,17 @@ def edit_product(
     b_id: str, 
     token: str = Header()
 ):
+    if offline:
+        return {
+            "_id": "k2i39i0r392irrr8439", 
+            "image_url": "https://example.com/image.jpg",
+            "product_name": "Sample Product Name",
+            "category_name": "Sample Category",
+            "category_id": "sample_category_id",
+            "short_description": "Sample short description of the product.",
+            "body": "Detailed description of the sample product.",
+            "iframe": "<iframe src='https://example.com'></iframe>",
+        }
     VALIDATE_TOKEN(token)
 
     product_data = product_content.model_dump()
@@ -510,6 +673,8 @@ CONTACT US
     response_model=dict
 )
 def create_contact(contact: ContactUs):
+    if offline:
+        return {"status": True}
     data = contact.model_dump()
     contact_collection = database["contact_collection"]
     contact_collection.insert_one(data)
@@ -521,6 +686,30 @@ def create_contact(contact: ContactUs):
     response_model=ContactMultiple
 )
 def get_all_contacts():
+    if offline:
+        return {
+            "current_page": 0,
+            "pages": 0,
+            "contacts": [
+                {
+                    "_id": "k2i39i0r392ir8439",
+                    "name": "John Doe",
+                    "email": "etimitest@gmailcpom",
+                    "message": "Hello, I would like to know more about your products.",
+                    "phone_number": "+1234567890",
+                    "created_at": "2024-01-01"
+                },
+                {
+                    "_id": "k2jwesccmsi39i0r392ir8439",
+                    "name": "John Rugged",
+                    "email": "etimitest@gmailcpom",
+                    "message": "Hello, I would like to know more about your products.",
+                    "phone_number": "+1234567890",
+                    "created_at": "2024-01-01"
+                },
+            ]
+        }
+
     contact_collection = database["contact_collection"]
     data = list(contact_collection.find({}).sort("created_at", -1))
     for d in data:
@@ -536,6 +725,15 @@ def get_all_contacts():
     response_model=ContactOut
 )
 def get_one_contact(contact_id: str):
+    if offline:
+        return {
+            "_id": "k2i39i0r392ir8439",
+            "name": "John Doe",
+            "email": "etimitest@gmailcpom",
+            "message": "Hello, I would like to know more about your products.",
+            "phone_number": "+1234567890",
+            "created_at": "2024-01-01"
+        }
     contact_collection = database["contact_collection"]
     contact = contact_collection.find_one({"_id": ObjectId(contact_id)})
     # convert id to str
@@ -550,6 +748,8 @@ def get_one_contact(contact_id: str):
     status_code=status.HTTP_200_OK
 )
 def delete_contact(contact_id: str, token: str = Header()):
+    if offline:
+        return {"status": True}
     VALIDATE_TOKEN(token)
     contact_collection = database["contact_collection"]
     data = contact_collection.find_one({"_id": ObjectId(contact_id)})

@@ -3,16 +3,13 @@ from datetime import date
 from typing import Optional
 from enum import Enum
 
-
 # shared models
 class OutputModel(BaseModel):
     id: str = Field(alias="_id")
 
-
 class CategoryType(Enum):
     product="product"
     blog="blog"
-
 
 # specific models
 class Category(BaseModel):
@@ -20,16 +17,13 @@ class Category(BaseModel):
     type: str # should be either 'product' or 'blog'
     description: str
 
-
 class CategoryOut(OutputModel):
     name: str
     description: str
     type: str
 
-
 class EmailNewsletter(BaseModel):
     email: str
-
 
 class BlogPost(BaseModel):
     image_url: str
@@ -41,7 +35,6 @@ class BlogPost(BaseModel):
     date: str = Field(default=str(date.today()))
     iframe: str
 
-
 class BlogPostOut(OutputModel):
     image_url: str
     category_id: str
@@ -52,12 +45,10 @@ class BlogPostOut(OutputModel):
     date: str = Field(default=str(date.today()))
     iframe: str
 
-
 class BlogPostOutMultiple(BaseModel):
     current_page: int = 0
     pages: int = 0
     blogs: list[BlogPostOut] = []
-
 
 class Admin(BaseModel):
     email: str
@@ -80,7 +71,6 @@ class Product(BaseModel):
     date: str = Field(default=str(date.today()))
     iframe: str
 
-
 class ProductOut(OutputModel):
     image_url: str
     category_id: str
@@ -89,14 +79,12 @@ class ProductOut(OutputModel):
     short_description: str
     body: str
     date: str = Field(default=str(date.today()))
-    iframe: str
-
+    iframe: Optional[str] = None
 
 class ProductMultiple(BaseModel):
     current_page: int = 0
     pages: int = 0
     products: list[ProductOut] = []
-
 
 class ContactUs(BaseModel):
     name: Optional[str]
