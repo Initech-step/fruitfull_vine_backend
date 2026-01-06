@@ -23,6 +23,17 @@ from utils.models import (
 )
 import os
 
+def str_to_bool(s):
+    s = s.strip().lower() # Remove leading/trailing spaces and convert to lowercase
+    if s == "true":
+        return True
+    elif s == "false":
+        return False
+    else:
+        # Handle invalid input as needed (e.g., raise a ValueError)
+        raise ValueError(f"Invalid boolean string: '{s}'")
+    
+
 # initialize app
 app = FastAPI()
 
@@ -37,7 +48,7 @@ app.add_middleware(
 )
 
 database = connect_to_db()
-offline = os.getenv("OFFLINE_MODE", False)
+offline = str_to_bool(os.getenv("OFFLINE_MODE"))
 print(f"\n OFFLINE MODE: {offline} \n")
 print(type(offline))
 PAGINATION_PER_PAGE = 10
