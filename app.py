@@ -5,6 +5,7 @@ from typing import List, Optional
 import math
 from datetime import datetime
 from utils.database import connect_to_db
+from utils.file_upload import upload_file_to_s3
 from utils.models import (
     LogInDetails,
     Category,
@@ -48,7 +49,7 @@ app.add_middleware(
 )
 
 database = connect_to_db()
-offline = str_to_bool(os.getenv("OFFLINE_MODE"))
+offline = str_to_bool(os.getenv("OFFLINE_MODE", False))
 print(f"\n OFFLINE MODE: {offline} \n")
 print(type(offline))
 PAGINATION_PER_PAGE = 10
@@ -245,12 +246,42 @@ def update_category(c_id: str, category: Category, token: str = Header()):
     status_code=status.HTTP_201_CREATED,
     response_model=dict
 )
-def create_blog(blog: BlogPost, token: str = Header()):
+def create_blog(
+    token: str = Header(),
+    category_id: str = Form(...),
+    category_name: str = Form(...),
+    post_title: str = Form(...),
+    short_title: str = Form(...),
+    body: str = Form(...),
+    image: UploadFile = File(...),
+):
     if offline:
         return {"status": True}
     VALIDATE_TOKEN(token)
+    
+    # 1. Read file content
+    file_content = await image.read()
+    
+    # 2. Upload using utility
+    public_url = upload_file_to_s3(file_content)
+    
+    if not public_url:
+        return {"status": False, "message": "Upload failed"}
+
+    # 3. Create the document for MongoDB
+    blog_data = {
+        "image_url": public_url, # This is now the CloudFront URL
+        "post_title": post_title,
+        "body": body,
+        "category_id": category_id,
+        "category_name": category_name,
+        "short_title": short_title,
+        "iframe": iframe,
+        "date": str(date.today())
+    }
+
     blog_collection = database["blog_posts_collection"]
-    blog_collection.insert_one(blog.model_dump())
+    blog_collection.insert_one(blog_data)
 
     return {"status": True}
 
