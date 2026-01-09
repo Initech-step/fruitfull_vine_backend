@@ -5,13 +5,14 @@ import os
 from dotenv import load_dotenv
 
 # Load variables from .env file
-load_dotenv() 
+load_dotenv()
 
 # Access the environment variables
 test_mode = os.getenv("TEST", True)
 username = os.getenv("ATLAS_USERNAME")
 pword = os.getenv("PWORD")
 offline = os.getenv("OFFLINE_MODE", False)
+
 
 def connect_to_db() -> Dict[str, Any]:
     uri = f"mongodb+srv://{username}:{pword}@atlascluster.doihstd.mongodb.net/?appName=AtlasCluster"
@@ -31,7 +32,7 @@ def connect_to_db() -> Dict[str, Any]:
             "categories_collection": db["Categories"],
             "blog_posts_collection": db["BlogPosts"],
             "products_collection": db["Products"],
-            "contact_collection": db["Contacts"]
+            "contact_collection": db["Contacts"],
         }
     except Exception as e:
         print(e)
