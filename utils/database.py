@@ -20,8 +20,10 @@ def connect_to_db() -> Dict[str, Any]:
     try:
         client.admin.command("ping")
         if test_mode:
+            print("test mode is true")
             db = client["TestFruitfulVine"]
         else:
+            print("test mode is false")
             db = client["FruitfulVine"]
         print("Connected to MongoDB successfully.")
         return {

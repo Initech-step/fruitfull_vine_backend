@@ -7,6 +7,7 @@ from enum import Enum
 class OutputModel(BaseModel):
     id: str = Field(alias="_id")
 
+
 class CategoryType(Enum):
     product="product"
     blog="blog"
@@ -17,16 +18,21 @@ class Category(BaseModel):
     type: str # should be either 'product' or 'blog'
     description: str
 
+
 class CategoryOut(OutputModel):
     name: str
     description: str
     type: str
 
+
 class EmailNewsletter(BaseModel):
     email: str
 
-class BlogPost(BaseModel):
-    image_url: str
+
+class BlogPostOut(OutputModel):
+    url: Optional[str] = None
+    secure_url: Optional[str] = None
+    public_id: Optional[str] = None
     category_id: str
     category_name: str
     post_title: str
@@ -35,20 +41,12 @@ class BlogPost(BaseModel):
     date: str = Field(default=str(date.today()))
     iframe: str
 
-class BlogPostOut(OutputModel):
-    image_url: str
-    category_id: str
-    category_name: str
-    post_title: str
-    short_title: str
-    body: str
-    date: str = Field(default=str(date.today()))
-    iframe: str
 
 class BlogPostOutMultiple(BaseModel):
     current_page: int = 0
     pages: int = 0
     blogs: list[BlogPostOut] = []
+
 
 class Admin(BaseModel):
     email: str
@@ -62,7 +60,9 @@ class LogInDetails(BaseModel):
 
 
 class Product(BaseModel):
-    image_url: str
+    url: Optional[str] = None
+    secure_url: Optional[str] = None
+    public_id: Optional[str] = None
     category_id: str
     category_name: str
     product_name: str
@@ -70,6 +70,7 @@ class Product(BaseModel):
     body: str
     date: str = Field(default=str(date.today()))
     iframe: str
+
 
 class ProductOut(OutputModel):
     image_url: str

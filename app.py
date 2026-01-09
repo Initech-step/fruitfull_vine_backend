@@ -1,16 +1,28 @@
-from fastapi import FastAPI, HTTPException, status, Request, Response, Header
+from fastapi import (
+    FastAPI, 
+    HTTPException, 
+    status, 
+    Request, 
+    Response, 
+    Header, 
+    UploadFile, 
+    Form,
+    File
+)
 from fastapi.middleware.cors import CORSMiddleware
 from bson.objectid import ObjectId
 from typing import List, Optional
 import math
 from datetime import datetime
 from utils.database import connect_to_db
-from utils.file_upload import upload_file_to_s3
+from utils.file_upload import (
+    upload_file_to_s3, 
+    upload_file_to_cloudinary
+)
 from utils.models import (
     LogInDetails,
     Category,
     CategoryOut,
-    BlogPost,
     BlogPostOut,
     BlogPostOutMultiple,
     Product,
@@ -246,7 +258,7 @@ def update_category(c_id: str, category: Category, token: str = Header()):
     status_code=status.HTTP_201_CREATED,
     response_model=dict
 )
-def create_blog(
+async def create_blog(
     token: str = Header(),
     category_id: str = Form(...),
     category_name: str = Form(...),
@@ -261,23 +273,70 @@ def create_blog(
     
     # 1. Read file content
     file_content = await image.read()
-    
+    file_name =  image.filename
+    content_type= image.content_type 
     # 2. Upload using utility
-    public_url = upload_file_to_s3(file_content)
+    public_url = upload_file_to_s3(
+        file_content,
+        content_type=content_type,
+        file_name=file_name, 
+        is_product=False
+    )
     
     if not public_url:
         return {"status": False, "message": "Upload failed"}
 
     # 3. Create the document for MongoDB
     blog_data = {
-        "image_url": public_url, # This is now the CloudFront URL
+        "image_url": "gtfdrgxdfxdf",
         "post_title": post_title,
         "body": body,
         "category_id": category_id,
         "category_name": category_name,
         "short_title": short_title,
-        "iframe": iframe,
-        "date": str(date.today())
+        "date": str(datetime.now())
+    }
+
+    blog_collection = database["blog_posts_collection"]
+    blog_collection.insert_one(blog_data)
+
+    return {"status": True}
+
+
+@app.post(
+    "/api/blog_cloudinary/",
+    status_code=status.HTTP_201_CREATED,
+    response_model=dict
+)
+async def create_blog_cloudinary(
+    token: str = Header(),
+    category_id: str = Form(...),
+    category_name: str = Form(...),
+    post_title: str = Form(...),
+    short_title: str = Form(...),
+    body: str = Form(...),
+    image: UploadFile = File(...),
+):
+    if offline:
+        return {"status": True}
+    VALIDATE_TOKEN(token)
+    
+    # 1. Read file content
+    file_content = await image.read()
+    # 2. Upload using utility
+    upload_file = upload_file_to_cloudinary(file_content)
+
+    # 3. Create the document for MongoDB
+    blog_data = {
+        "url": upload_file["url"],
+        "secure_url": upload_file["secure_url"],
+        "public_id": upload_file["public_id"],
+        "post_title": post_title,
+        "body": body,
+        "category_id": category_id,
+        "category_name": category_name,
+        "short_title": short_title,
+        "date": str(datetime.now())
     }
 
     blog_collection = database["blog_posts_collection"]
@@ -299,7 +358,8 @@ def edit_blog_content(
     if offline:
         return {
             "_id": "k2i39i0r392ir8439", 
-            "image_url": "https://example.com/image.jpg",
+            "url": "https://example.com/image.jpg",
+            "secure_url": "https://example.com/image.jpg",
             "post_title": "Sample Post Title",
             "category_name": "Sample Category",
             "category_id": "sample_category_id",
@@ -320,7 +380,6 @@ def edit_blog_content(
         {"_id": ObjectId(b_id)},
         {
             "$set": {
-                "image_url": blog_data.get("image_url"),
                 "post_title": blog_data.get("post_title"),
                 "category_name": blog_data.get("category_name"),
                 "category_id": blog_data.get("category_id"),
@@ -333,6 +392,7 @@ def edit_blog_content(
     data_output = blog_collection.find_one({"_id": ObjectId(b_id)})
     data_output["_id"] = str(data_output["_id"])
     return data_output
+
 
 # GET ALL BLOG CONTENTS
 @app.get(
@@ -349,7 +409,8 @@ def get_blog_posts(
             "blogs": [
                 {
                     "_id": "k2i39i0r392ir8439", 
-                    "image_url": "https://example.com/image.jpg",
+                    "url": "https://example.com/image.jpg",
+                    "secure_url": "https://example.com/image.jpg",
                     "post_title": "Sample Post Title",
                     "category_name": "Sample Category",
                     "category_id": "sample_category_id",
@@ -359,7 +420,8 @@ def get_blog_posts(
                 },
                 {
                     "_id": "oi23j4oij234oij234", 
-                    "image_url": "https://example.com/image2.jpg",
+                    "url": "https://example.com/image.jpg",
+                    "secure_url": "https://example.com/image.jpg",
                     "post_title": "Another Sample Post Title",
                     "category_name": "Another Sample Category",
                     "category_id": "another_sample_category_id",
@@ -416,7 +478,8 @@ def get_blog_content(b_id: str):
     if offline:
         return {
             "_id": "k2i39i0r392ir8439", 
-            "image_url": "https://example.com/image.jpg",
+            "url": "https://example.com/image.jpg",
+            "secure_url": "https://example.com/image.jpg",
             "post_title": "Sample Post Title",
             "category_name": "Sample Category",
             "category_id": "sample_category_id",
@@ -463,7 +526,8 @@ def get_last_post():
     if offline:
         return {
             "_id": "k2i39i0r392ir8439", 
-            "image_url": "https://example.com/image.jpg",
+            "url": "https://example.com/image.jpg",
+            "secure_url": "https://example.com/image.jpg",
             "post_title": "Sample Post Title",
             "category_name": "Sample Category",
             "category_id": "sample_category_id",
@@ -519,7 +583,8 @@ def get_products(
             "products": [
                 {
                     "_id": "k2i39i0r392ir8439", 
-                    "image_url": "https://example.com/image.jpg",
+                    "url": "https://example.com/image.jpg",
+                    "secure_url": "https://example.com/image.jpg",
                     "product_name": "Sample Product Name",
                     "category_name": "Sample Category",
                     "category_id": "sample_category_id",
@@ -529,7 +594,8 @@ def get_products(
                 },
                 {
                     "_id": "oi23j4oij234oij234", 
-                    "image_url": "https://example.com/image2.jpg",
+                    "url": "https://example.com/image.jpg",
+                    "secure_url": "https://example.com/image.jpg",
                     "product_name": "Another Sample Product Name",
                     "category_name": "Another Sample Category",
                     "category_id": "another_sample_category_id",
@@ -587,7 +653,8 @@ def get_product(p_id: str):
     if offline:
         return {
             "_id": "k2i39i0r392irrr8439", 
-            "image_url": "https://example.com/image.jpg",
+            "url": "https://example.com/image.jpg",
+            "secure_url": "https://example.com/image.jpg",
             "product_name": "Sample Product Name",
             "category_name": "Sample Category",
             "category_id": "sample_category_id",
@@ -614,7 +681,8 @@ def get_last_product():
     if offline:
         return {
             "_id": "k2i39i0r392irrr8439", 
-            "image_url": "https://example.com/image.jpg",
+            "url": "https://example.com/image.jpg",
+            "secure_url": "https://example.com/image.jpg",
             "product_name": "Sample Product Name",
             "category_name": "Sample Category",
             "category_id": "sample_category_id",
@@ -668,7 +736,8 @@ def edit_product(
     if offline:
         return {
             "_id": "k2i39i0r392irrr8439", 
-            "image_url": "https://example.com/image.jpg",
+            "url": "https://example.com/image.jpg",
+            "secure_url": "https://example.com/image.jpg",
             "product_name": "Sample Product Name",
             "category_name": "Sample Category",
             "category_id": "sample_category_id",

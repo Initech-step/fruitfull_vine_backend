@@ -2,6 +2,14 @@ import boto3
 from botocore.exceptions import NoCredentialsError
 import uuid
 import os
+import cloudinary
+import cloudinary.uploader
+
+cloudinary.config(
+    cloud_name=os.getenv('CLOUDINARY_CLOUD_NAME'),
+    api_key=os.getenv('CLOUDINARY_API_KEY'),
+    api_secret=os.getenv('CLOUDINARY_SECRET_KEY')
+)
 
 # Initialize S3 Client
 s3_client = boto3.client(
@@ -11,7 +19,8 @@ s3_client = boto3.client(
     region_name=os.getenv("AWS_REGION")
 )
 
-def upload_file_to_s3(file_data, is_product=True):
+
+def upload_file_to_s3(file_data, file_name, content_type, is_product=True):
     """
     Uploads a file to S3 and returns the CloudFront URL.
     """
@@ -26,21 +35,39 @@ def upload_file_to_s3(file_data, is_product=True):
 
     try:
         # Generate a unique filename to prevent overwriting
-        filename = f"{folder}/{uuid.uuid4()}"
-        
+        filename = f"{folder}/{file_name}"
         # Upload the file
         s3_client.put_object(
             Bucket=bucket_name,
             Key=filename,
             Body=file_data,
+            ContentType=content_type
         )
-        
-        # Construct the CLOUDFRONT URL (not the S3 URL)
-        # cloudfront_domain = os.getenv("CLOUDFRONT_DOMAIN") # e.g., d111.cloudfront.net
-        # return f"https://{cloudfront_domain}/{filename}"
-
+    
     except NoCredentialsError:
         return None
     except Exception as e:
         print(f"Error uploading: {e}")
         return None
+
+def upload_file_to_cloudinary(file_data):
+    """
+    Uploads a file to cloudinary.
+    """
+    try:
+        upload_result = cloudinary.uploader.upload(
+            file_data,
+            resource_type="image",
+            folder="fruitfulvine"
+        )
+        print(f"\n {upload_result}")
+        # Return the secure URL of the uploaded image
+        return {
+            "url": upload_result.get("secure_url"),
+            "public_id": upload_result.get("public_id")
+        }
+
+    except Exception as e:
+        print(f"Error uploading: {e}")
+        return None
+

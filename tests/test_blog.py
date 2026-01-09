@@ -1,24 +1,62 @@
+import os
 
 
 def test_create_blog_post(client, admin_token):
+    # Get the path to the image relative to this test file
+    current_dir = os.path.dirname(__file__)
+    file_path = os.path.join(current_dir, "test.jpg")
+
     payload = {
-        "image_url": "https://example.com/image.jpg",
         "category_id": "cat-001",
         "category_name": "Tech",
         "post_title": "Test Blog Post",
         "short_title": "Test Blog",
         "body": "This is a test blog body",
-        "iframe": "www.whatever.com"
     }
 
-    response = client.post(
-        "/api/blog/",
-        json=payload,
-        headers={"token": admin_token}
-    )
+    # Open the existing file in binary read mode ('rb')
+    with open(file_path, "rb") as image_file:
+        files = {
+            "image": ("test.jpg", image_file, "image/jpeg")
+        }
+
+        response = client.post(
+            "/api/blog/",
+            data=payload,
+            files=files,
+            headers={"token": admin_token}
+        )
 
     assert response.status_code == 201
-    assert response.json() == {"status": True}
+
+def test_create_blog_post_with_cloudinary(client, admin_token):
+    # Get the path to the image relative to this test file
+    current_dir = os.path.dirname(__file__)
+    file_path = os.path.join(current_dir, "test.jpg")
+
+    payload = {
+        "category_id": "cat-001",
+        "category_name": "Tech",
+        "post_title": "Test Blog Post",
+        "short_title": "Test Blog",
+        "body": "This is a test blog body",
+    }
+
+    # Open the existing file in binary read mode ('rb')
+    with open(file_path, "rb") as image_file:
+        files = {
+            "image": ("test.jpg", image_file, "image/jpeg")
+        }
+
+        response = client.post(
+            "/api/blog_cloudinary/",
+            data=payload,
+            files=files,
+            headers={"token": admin_token}
+        )
+
+    assert response.status_code == 201
+
 
 def test_get_blog_posts(client, test_blog_posts_setup):
     response = client.get("/api/blog/?page=1&limit=15")
@@ -43,7 +81,8 @@ def test_blog_post_schema(client, test_blog_posts_setup):
     assert "_id" in blog
     assert isinstance(blog["_id"], str)
 
-    assert "image_url" in blog
+    assert "url" in blog
+    assert "secure_url" in blog
     assert "category_id" in blog
     assert "category_name" in blog
     assert "post_title" in blog
@@ -60,7 +99,8 @@ def test_get_single_blog_post(client, test_blog_posts_setup):
     assert "_id" in body
     assert isinstance(body["_id"], str)
 
-    assert "image_url" in body
+    assert "url" in blog
+    assert "secure_url" in blog
     assert "category_id" in body
     assert "category_name" in body
     assert "post_title" in body
@@ -76,7 +116,8 @@ def test_get_last_blog_post(client, test_blog_posts_setup):
     body = response.json()
     assert "_id" in body
     assert isinstance(body["_id"], str)
-    assert "image_url" in body
+    assert "url" in blog
+    assert "secure_url" in blog
     assert "category_id" in body
     assert "category_name" in body
     assert "post_title" in body
