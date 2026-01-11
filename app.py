@@ -139,7 +139,7 @@ def create_category(category: Category, token: str = Header()):
 
 
 @app.get("/api/category/", response_model=List[CategoryOut])
-def get_categories(type: CategoryType = CategoryType.product):
+def get_categories(type: Optional[CategoryType] = None):
     if offline:
         return [
             {
@@ -162,7 +162,10 @@ def get_categories(type: CategoryType = CategoryType.product):
             },
         ]
     category_collection = database["categories_collection"]
-    data = list(category_collection.find({"type": type.value}))
+    if type is not None:
+        data = list(category_collection.find({"type": type.value}))
+    else:
+        data = list(category_collection.find({}))
     for d in data:
         d["_id"] = str(d["_id"])
     return data

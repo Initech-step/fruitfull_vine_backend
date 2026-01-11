@@ -18,12 +18,12 @@ class CategoryType(Enum):
 class Category(BaseModel):
     name: str
     type: str  # should be either 'product' or 'blog'
-    description: str
+    description: Optional[str] = None
 
 
 class CategoryOut(OutputModel):
     name: str
-    description: str
+    description: Optional[str] = None
     type: str
 
 
