@@ -19,7 +19,7 @@ def test_create_blog_post_with_cloudinary(client, admin_token):
         files = {"image": ("test.jpg", image_file, "image/jpeg")}
 
         response = client.post(
-            "/api/blog_cloudinary/",
+            "/api/blog/",
             data=payload,
             files=files,
             headers={"token": admin_token},

@@ -59,8 +59,9 @@ def upload_file_to_cloudinary(file_data):
         print(f"\n {upload_result}")
         # Return the secure URL of the uploaded image
         return {
-            "url": upload_result.get("secure_url"),
-            "public_id": upload_result.get("public_id"),
+            "url": upload_result.get("url"),
+            "secure_url": upload_result.get("secure_url"),
+            "public_id": upload_result.get("public_id")
         }
 
     except Exception as e:

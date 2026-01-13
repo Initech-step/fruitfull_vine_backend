@@ -241,56 +241,27 @@ def update_category(c_id: str, category: Category, token: str = Header()):
     return {"status": True}
 
 
+
+
+
+
+
+
+
+
 """
  BLOG APIS
 """
 
 
-@app.post("/api/blog/", status_code=status.HTTP_201_CREATED, response_model=dict)
-async def create_blog(
-    token: str = Header(),
-    category_id: str = Form(...),
-    category_name: str = Form(...),
-    post_title: str = Form(...),
-    short_title: str = Form(...),
-    body: str = Form(...),
-    image: UploadFile = File(...),
-):
-    if offline:
-        return {"status": True}
-    VALIDATE_TOKEN(token)
 
-    # 1. Read file content
-    file_content = await image.read()
-    file_name = image.filename
-    content_type = image.content_type
-    # 2. Upload using utility
-    public_url = upload_file_to_s3(
-        file_content, content_type=content_type, file_name=file_name, is_product=False
-    )
 
-    if not public_url:
-        return {"status": False, "message": "Upload failed"}
-
-    # 3. Create the document for MongoDB
-    blog_data = {
-        "image_url": "gtfdrgxdfxdf",
-        "post_title": post_title,
-        "body": body,
-        "category_id": category_id,
-        "category_name": category_name,
-        "short_title": short_title,
-        "date": str(datetime.now()),
-    }
-
-    blog_collection = database["blog_posts_collection"]
-    blog_collection.insert_one(blog_data)
-
-    return {"status": True}
 
 
 @app.post(
-    "/api/blog_cloudinary/", status_code=status.HTTP_201_CREATED, response_model=dict
+    "/api/blog/", 
+    status_code=status.HTTP_201_CREATED, 
+    response_model=dict
 )
 async def create_blog_cloudinary(
     token: str = Header(),
@@ -300,6 +271,7 @@ async def create_blog_cloudinary(
     short_title: str = Form(...),
     body: str = Form(...),
     image: Optional[UploadFile] = File(None),
+    draft: bool = Form(False),
 ):
     if offline:
         return {"status": True}
@@ -320,6 +292,7 @@ async def create_blog_cloudinary(
         "category_id": category_id,
         "category_name": category_name,
         "short_title": short_title,
+        "draft": draft,
         "date": str(datetime.now()),
     }
 
@@ -330,7 +303,9 @@ async def create_blog_cloudinary(
 
 
 @app.put(
-    "/api/blog/{b_id}/", status_code=status.HTTP_200_OK, response_model=BlogPostOut
+    "/api/blog/{b_id}/", 
+    status_code=status.HTTP_200_OK, 
+    response_model=BlogPostOut
 )
 def edit_blog_content(
     b_id: str,
@@ -385,7 +360,8 @@ def edit_blog_content(
 
     if data_target == None:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Resource not found"
+            status_code=status.HTTP_404_NOT_FOUND, 
+            detail="Resource not found"
         )
 
     blog_collection.update_one(
@@ -402,7 +378,11 @@ def edit_blog_content(
     "/api/blog/",
     response_model=BlogPostOutMultiple,
 )
-def get_blog_posts(page: int = 1, limit: int = 15, category_id: Optional[str] = None):
+def get_blog_posts(
+    page: int = 1, 
+    limit: int = 15, 
+    category_id: Optional[str] = None
+):
     if offline:
         return {
             "blogs": [
@@ -459,7 +439,9 @@ def get_blog_posts(page: int = 1, limit: int = 15, category_id: Optional[str] = 
 
 # GET SPECIFIC BLOG POST
 @app.get(
-    "/api/blog/{b_id}/", status_code=status.HTTP_200_OK, response_model=BlogPostOut
+    "/api/blog/{b_id}/", 
+    status_code=status.HTTP_200_OK, 
+    response_model=BlogPostOut
 )
 def get_blog_content(b_id: str):
     if offline:
@@ -496,14 +478,18 @@ def delete_blog_post(b_id: str, token: str = Header()):
     data = blog_collection.find_one({"_id": ObjectId(b_id)})
     if data == None:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Resource not found"
+            status_code=status.HTTP_404_NOT_FOUND, 
+            detail="Resource not found"
         )
     blog_collection.delete_one(data)
     return {"status": True}
 
 
 # GET LAST BLOG POST
-@app.get("/api/get_last_post/", response_model=BlogPostOut)
+@app.get(
+    "/api/get_last_post/", 
+    response_model=BlogPostOut
+)
 def get_last_post():
     if offline:
         return {
@@ -522,11 +508,19 @@ def get_last_post():
 
     if not last_post:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="No blog posts found"
+            status_code=status.HTTP_404_NOT_FOUND, 
+            detail="No blog posts found"
         )
 
     last_post["_id"] = str(last_post["_id"])
     return last_post
+
+
+
+
+
+
+
 
 
 """
@@ -534,7 +528,11 @@ PRODUCTS
 """
 
 
-@app.post("/api/product/", status_code=status.HTTP_201_CREATED, response_model=dict)
+@app.post(
+    "/api/product/", 
+    status_code=status.HTTP_201_CREATED, 
+    response_model=dict
+)
 def create_product(product: Product, token: str = Header()):
     if offline:
         return {"status": True}
@@ -548,7 +546,11 @@ def create_product(product: Product, token: str = Header()):
     "/api/products/",
     response_model=ProductMultiple,
 )
-def get_products(page: int = 1, limit: int = 15, category_id: Optional[str] = None):
+def get_products(
+    page: int = 1, 
+    limit: int = 15, 
+    category_id: Optional[str] = None
+):
     if offline:
         return {
             "products": [
@@ -606,7 +608,9 @@ def get_products(page: int = 1, limit: int = 15, category_id: Optional[str] = No
 
 
 @app.get(
-    "/api/product/{p_id}/", status_code=status.HTTP_200_OK, response_model=ProductOut
+    "/api/product/{p_id}/", 
+    status_code=status.HTTP_200_OK, 
+    response_model=ProductOut
 )
 def get_product(p_id: str):
     if offline:

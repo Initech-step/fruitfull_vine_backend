@@ -40,8 +40,8 @@ class BlogPostOut(OutputModel):
     post_title: str
     short_title: str
     body: str
-    date: str = Field(default=str(date.today()))
-    iframe: str
+    date: Optional[str] = Field(default=str(date.today()))
+    draft: bool = False
 
 
 class BlogPostOutMultiple(BaseModel):
