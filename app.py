@@ -22,7 +22,6 @@ from utils.models import (
     CategoryOut,
     BlogPostOut,
     BlogPostOutMultiple,
-    Product,
     ProductOut,
     ProductMultiple,
     EmailNewsletter,
@@ -424,7 +423,6 @@ def get_blog_posts(
     if category_id is not None:
         cursor = (
             blog_collection.find({"category_id": category_id})
-            .sort("_id", -1)
             .skip(skip)
             .limit(limit)
         )
@@ -533,12 +531,39 @@ PRODUCTS
     status_code=status.HTTP_201_CREATED, 
     response_model=dict
 )
-def create_product(product: Product, token: str = Header()):
+async def create_product(
+    category_id: str = Form(...),
+    category_name: str = Form(...),
+    product_name: str = Form(...),
+    short_description: str = Form(...),
+    body: str = Form(...),
+    draft: bool = Form(False),
+    image: Optional[UploadFile] = File(None),
+    token: str = Header()
+):
     if offline:
-        return {"status": True}
+        return {"status": True, "offline": True}
     VALIDATE_TOKEN(token)
+    # 1. Read file content
+    file_content = await image.read()
+    # 2. Upload using utility
+    upload_file = upload_file_to_cloudinary(file_content)
+
+    # 3. Create the document for MongoDB
+    product_data = {
+        "url": upload_file["url"],
+        "secure_url": upload_file["secure_url"],
+        "public_id": upload_file["public_id"],
+        "product_name": product_name,
+        "body": body,
+        "category_id": category_id,
+        "category_name": category_name,
+        "short_description": short_description,
+        "draft": draft,
+        "date": str(datetime.now()),
+    }
     product_collection = database["products_collection"]
-    product_collection.insert_one(product.model_dump())
+    product_collection.insert_one(product_data)
     return {"status": True}
 
 
@@ -591,6 +616,7 @@ def get_products(
     total_pages = math.ceil(total_docs / limit)
 
     cursor = product_collection.find({}).sort("_id", -1).skip(skip).limit(limit)
+    print(cursor)
     if category_id is not None:
         cursor = (
             product_collection.find({"category_id": category_id})
@@ -599,12 +625,13 @@ def get_products(
             .limit(limit)
         )
 
-    blogs = []
+    products = []
     for doc in cursor:
         doc["_id"] = str(doc["_id"])
-        blogs.append(doc)
+        products.append(doc)
+        print(doc)
 
-    return {"blogs": blogs, "pages": total_pages, "current_page": page}
+    return {"products": products, "pages": total_pages, "current_page": page}
 
 
 @app.get(
@@ -680,11 +707,19 @@ def delete_product(p_id: str, token: str = Header()):
 
 
 @app.post(
-    "/api/edit_product/{b_id}",
+    "/api/edit_product/{p_id}",
     status_code=status.HTTP_200_OK,
     response_model=ProductOut,
 )
-def edit_product(product_content: Product, b_id: str, token: str = Header()):
+def edit_product(
+    p_id: str,
+    product_name: Optional[str] = Form(None),
+    short_description: Optional[str] = Form(None),
+    body: Optional[str] = Form(None),
+    draft: Optional[bool] = Form(False),
+    image: Optional[UploadFile] = File(None),
+    token: str = Header()
+):
     if offline:
         return {
             "_id": "k2i39i0r392irrr8439",
@@ -699,36 +734,50 @@ def edit_product(product_content: Product, b_id: str, token: str = Header()):
         }
     VALIDATE_TOKEN(token)
 
-    product_data = product_content.model_dump()
     product_collection = database["products_collection"]
-    data_target = product_collection.find_one({"_id": ObjectId(b_id)})
+    # 2. Build the update dictionary dynamically
+    # Only include fields that are not None
+    update_data = {}
+
+    fields = {
+        "product_name": product_name,
+        "short_description": short_description,
+        "body": body,
+        "draft": draft
+    }
+
+    if image is not None:
+        file_content = image.read()
+        upload_file = upload_file_to_cloudinary(file_content)
+        update_data["url"] = upload_file["url"]
+        update_data["secure_url"] = upload_file["secure_url"]
+        update_data["public_id"] = upload_file["public_id"]
+
+    for key, value in fields.items():
+        if value is not None:
+            update_data[key] = value
+
+    data_target = product_collection.find_one({"_id": ObjectId(p_id)})
+
     if data_target == None:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Resource not found"
+            status_code=status.HTTP_404_NOT_FOUND, 
+            detail="Resource not found"
         )
+
     product_collection.update_one(
-        {"_id": ObjectId(b_id)},
-        {
-            "$set": {
-                "image_url": product_data.get("image_url"),
-                "product_name": product_data.get("product_name"),
-                "category_name": product_data.get("category_name"),
-                "category_id": product_data.get("category_id"),
-                "short_description": product_data.get("short_description"),
-                "body": product_data.get("body"),
-                "iframe": product_data.get("iframe"),
-            }
-        },
+        {"_id": ObjectId(p_id)},
+        {"$set": update_data},
     )
-    data_output = product_collection.find_one({"_id": ObjectId(b_id)})
+    data_output = product_collection.find_one({"_id": ObjectId(p_id)})
     data_output["_id"] = str(data_output["_id"])
     return data_output
+
 
 
 """
 CONTACT US
 """
-# TODO: PRODUCT Filtering by price or other stats
 
 
 @app.post("/api/contact/", status_code=201, response_model=dict)

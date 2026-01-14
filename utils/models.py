@@ -61,28 +61,16 @@ class LogInDetails(BaseModel):
     password: str
 
 
-class Product(BaseModel):
-    url: Optional[str] = None
-    secure_url: Optional[str] = None
-    public_id: Optional[str] = None
-    category_id: str
-    category_name: str
-    product_name: str
-    short_description: str
-    body: str
-    date: str = Field(default=str(date.today()))
-    iframe: str
-
-
 class ProductOut(OutputModel):
-    image_url: str
+    url: str
+    secure_url: str
+    public_id: str
     category_id: str
     category_name: str
     product_name: str
     short_description: str
     body: str
     date: str = Field(default=str(date.today()))
-    iframe: Optional[str] = None
 
 
 class ProductMultiple(BaseModel):
