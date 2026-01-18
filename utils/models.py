@@ -1,6 +1,6 @@
 from pydantic import BaseModel, Field
 from datetime import date
-from typing import Optional
+from typing import Optional, List
 from enum import Enum
 
 
@@ -61,10 +61,14 @@ class LogInDetails(BaseModel):
     password: str
 
 
-class ProductOut(OutputModel):
+class Images(BaseModel):
     url: str
     secure_url: str
     public_id: str
+
+
+class ProductOut(OutputModel):
+    images: List[Images] = []
     category_id: str
     category_name: str
     product_name: str

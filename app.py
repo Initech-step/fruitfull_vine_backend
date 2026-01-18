@@ -538,32 +538,38 @@ async def create_product(
     short_description: str = Form(...),
     body: str = Form(...),
     draft: bool = Form(False),
-    image: Optional[UploadFile] = File(None),
+    images: List[UploadFile] = File([]),
     token: str = Header()
 ):
     if offline:
         return {"status": True, "offline": True}
     VALIDATE_TOKEN(token)
-    # 1. Read file content
-    file_content = await image.read()
-    # 2. Upload using utility
-    upload_file = upload_file_to_cloudinary(file_content)
 
-    # 3. Create the document for MongoDB
+    uploaded_images = []
+
+    for image in images:
+        file_content = await image.read()
+        upload_file = upload_file_to_cloudinary(file_content)
+        upload_file_data = {
+            "url": upload_file["url"],
+            "secure_url": upload_file["secure_url"],
+            "public_id": upload_file["public_id"],
+        }
+        uploaded_images.append(upload_file_data)
+
     product_data = {
-        "url": upload_file["url"],
-        "secure_url": upload_file["secure_url"],
-        "public_id": upload_file["public_id"],
+        images: uploaded_images,
         "product_name": product_name,
         "body": body,
         "category_id": category_id,
         "category_name": category_name,
         "short_description": short_description,
         "draft": draft,
-        "date": str(datetime.now()),
+        "date": str(datetime.now().today()),
     }
     product_collection = database["products_collection"]
     product_collection.insert_one(product_data)
+
     return {"status": True}
 
 
@@ -581,8 +587,12 @@ def get_products(
             "products": [
                 {
                     "_id": "k2i39i0r392ir8439",
-                    "url": "https://example.com/image.jpg",
-                    "secure_url": "https://example.com/image.jpg",
+                    "images": [
+                        {
+                            "url": "https://example.com/image.jpg",
+                            "secure_url": "https://example.com/image.jpg"
+                        }
+                    ],
                     "product_name": "Sample Product Name",
                     "category_name": "Sample Category",
                     "category_id": "sample_category_id",
@@ -592,8 +602,12 @@ def get_products(
                 },
                 {
                     "_id": "oi23j4oij234oij234",
-                    "url": "https://example.com/image.jpg",
-                    "secure_url": "https://example.com/image.jpg",
+                    "images": [
+                        {
+                            "url": "https://example.com/image.jpg",
+                            "secure_url": "https://example.com/image.jpg"
+                        }
+                    ],
                     "product_name": "Another Sample Product Name",
                     "category_name": "Another Sample Category",
                     "category_id": "another_sample_category_id",
@@ -643,8 +657,12 @@ def get_product(p_id: str):
     if offline:
         return {
             "_id": "k2i39i0r392irrr8439",
-            "url": "https://example.com/image.jpg",
-            "secure_url": "https://example.com/image.jpg",
+            "images": [
+                {
+                    "url": "https://example.com/image.jpg",
+                    "secure_url": "https://example.com/image.jpg"
+                }
+            ],
             "product_name": "Sample Product Name",
             "category_name": "Sample Category",
             "category_id": "sample_category_id",
@@ -669,8 +687,12 @@ def get_last_product():
     if offline:
         return {
             "_id": "k2i39i0r392irrr8439",
-            "url": "https://example.com/image.jpg",
-            "secure_url": "https://example.com/image.jpg",
+            "images": [
+                {
+                    "url": "https://example.com/image.jpg",
+                    "secure_url": "https://example.com/image.jpg"
+                }
+            ],
             "product_name": "Sample Product Name",
             "category_name": "Sample Category",
             "category_id": "sample_category_id",
@@ -717,14 +739,18 @@ def edit_product(
     short_description: Optional[str] = Form(None),
     body: Optional[str] = Form(None),
     draft: Optional[bool] = Form(False),
-    image: Optional[UploadFile] = File(None),
+    images: List[UploadFile] = File([]),
     token: str = Header()
 ):
     if offline:
         return {
             "_id": "k2i39i0r392irrr8439",
-            "url": "https://example.com/image.jpg",
-            "secure_url": "https://example.com/image.jpg",
+            "images": [
+                {
+                    "url": "https://example.com/image.jpg",
+                    "secure_url": "https://example.com/image.jpg"
+                }
+            ],
             "product_name": "Sample Product Name",
             "category_name": "Sample Category",
             "category_id": "sample_category_id",
@@ -738,20 +764,26 @@ def edit_product(
     # 2. Build the update dictionary dynamically
     # Only include fields that are not None
     update_data = {}
+    update_images = []
 
     fields = {
         "product_name": product_name,
         "short_description": short_description,
         "body": body,
-        "draft": draft
+        "draft": draft,
+        "images": update_images
     }
 
-    if image is not None:
+    for image in images:
         file_content = image.read()
         upload_file = upload_file_to_cloudinary(file_content)
-        update_data["url"] = upload_file["url"]
-        update_data["secure_url"] = upload_file["secure_url"]
-        update_data["public_id"] = upload_file["public_id"]
+        update_images.append(
+            {
+                "url": upload_file["url"],
+                "secure_url": upload_file["secure_url"],
+                "public_id": upload_file["public_id"]
+            }
+        )
 
     for key, value in fields.items():
         if value is not None:
