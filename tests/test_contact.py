@@ -1,4 +1,3 @@
-
 def test_create_contact(client):
     response = client.post(
         "/api/contact/",
@@ -6,12 +5,13 @@ def test_create_contact(client):
             "name": "John Doe",
             "email": "john@example.com",
             "message": "Hello from tests",
-            "phone_number": "+2349282892"
-        }
+            "phone_number": "+2349282892",
+        },
     )
 
     assert response.status_code == 201
     assert response.json() == {"status": True}
+
 
 def test_get_all_contacts(client, test_contact):
     response = client.get("/api/contact/")
@@ -27,6 +27,7 @@ def test_get_all_contacts(client, test_contact):
         assert "email" in contact
         assert "message" in contact
 
+
 def test_get_one_contact(client, test_contact):
     response = client.get(f"/api/contact/{test_contact[0]}/")
     assert response.status_code == 200
@@ -34,10 +35,10 @@ def test_get_one_contact(client, test_contact):
     contact = response.json()
     assert contact["_id"] == test_contact[0]
 
+
 def test_delete_contact(client, admin_token, test_contact):
     response = client.delete(
-        f"/api/contact/{test_contact[0]}/",
-        headers={"token": admin_token}
+        f"/api/contact/{test_contact[0]}/", headers={"token": admin_token}
     )
     assert response.status_code == 200
     assert response.json() == {"status": True}

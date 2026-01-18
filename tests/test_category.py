@@ -10,9 +10,9 @@ def test_create_category(client, admin_token):
         json={
             "name": "TEST_CATEGORY",
             "description": "Created by TestClient",
-            "type": "blog"
+            "type": "blog",
         },
-        headers={"token": admin_token}
+        headers={"token": admin_token},
     )
 
     assert response.status_code == 201
@@ -32,9 +32,9 @@ def test_delete_category(client, admin_token):
         json={
             "name": "TEST_DELETE_CATEGORY",
             "description": "Will be deleted",
-            "type": "blog"
+            "type": "blog",
         },
-        headers={"token": admin_token}
+        headers={"token": admin_token},
     )
 
     # fetch
@@ -45,8 +45,7 @@ def test_delete_category(client, admin_token):
 
     # delete
     delete_response = client.delete(
-        f"/api/category/{category_id}/blog/",
-        headers={"token": admin_token}
+        f"/api/category/{category_id}/blog/", headers={"token": admin_token}
     )
 
     assert delete_response.status_code == 200
@@ -55,4 +54,3 @@ def test_delete_category(client, admin_token):
     # verify
     remaining = client.get("/api/category/?type=blog").json()
     assert remaining == []
-
