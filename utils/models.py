@@ -33,7 +33,7 @@ class BlogPost(BaseModel):
     short_title: str
     body: str
     date: str = Field(default=str(date.today()))
-    iframe: str
+
 
 class BlogPostOut(OutputModel):
     image_url: str
