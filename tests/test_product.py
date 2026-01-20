@@ -1,17 +1,33 @@
-def test_create_product(client, admin_token):
-    payload = {
-        "image_url": "https://example.com/image.jpg",
-        "category_id": "prodcat1",
-        "category_name": "Tech",
-        "product_name": "Test Product",
-        "short_description": "Test Product",
-        "body": "This is a test product body",
-        "iframe": "www.whatever.com",
-    }
+import os
 
-    response = client.post(
-        "/api/product/", json=payload, headers={"token": admin_token}
-    )
+def test_create_product(client, admin_token):
+    # Open the test image file
+    current_dir = os.path.dirname(__file__)
+    file_path1 = os.path.join(current_dir, "test.jpg")
+    file_path2 = os.path.join(current_dir, "test2.png")
+
+    with open(file_path1, "rb") as img1, open(file_path2, "rb") as img2:
+        
+        payload = {
+            "category_id": "prodcat1",
+            "category_name": "Tech",
+            "product_name": "Test Product",
+            "short_description": "Test Product",
+            "body": "This is a test product body",
+            "draft": "false",  # Form data sends booleans as strings
+        }
+        
+        files = [
+            ("images", ("test.jpg", img1, "image/jpeg")),
+            ("images", ("test2.png", img2, "image/png"))
+        ]
+        
+        response = client.post(
+            "/api/product/",
+            data=payload,
+            files=files,
+            headers={"token": admin_token}
+        )
 
     assert response.status_code == 201
     assert response.json() == {"status": True}
@@ -53,13 +69,11 @@ def test_product_schema(client, test_products_setup):
     assert "_id" in product
     assert isinstance(product["_id"], str)
 
-    assert "image_url" in product
     assert "category_id" in product
     assert "category_name" in product
     assert "product_name" in product
     assert "short_description" in product
     assert "date" in product
-    assert "iframe" in product
 
 
 def test_get_last_product(client, test_products_setup):
@@ -69,14 +83,12 @@ def test_get_last_product(client, test_products_setup):
     body = response.json()
     assert "_id" in body
     assert isinstance(body["_id"], str)
-    assert "image_url" in body
     assert "category_id" in body
     assert "category_name" in body
     assert "product_name" in body
     assert "short_description" in body
     assert "body" in body
     assert "date" in body
-    assert "iframe" in body
 
 
 def test_delete_product(client, admin_token, test_products_setup):

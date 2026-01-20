@@ -144,19 +144,19 @@ def get_categories(type: Optional[CategoryType] = None):
             {
                 "_id": "64b8f4f2f2f2f2f2f2f2f2f2",
                 "name": "Sample Category",
-                "type": type.value,
+                "type": "Cat/prod",
                 "description": "This is a sample category description.",
             },
             {
                 "_id": "ofiolnbkcr",
                 "name": "Sample Category 2",
-                "type": type.value,
+                "type": "Cat/prod",
                 "description": "This is a sample category description.",
             },
             {
                 "_id": "k2i39i0r392ir8439",
                 "name": "Sample Category 3",
-                "type": type.value,
+                "type": "Cat/prod",
                 "description": "This is a sample category description.",
             },
         ]
@@ -240,28 +240,12 @@ def update_category(c_id: str, category: Category, token: str = Header()):
     return {"status": True}
 
 
-
-
-
-
-
-
-
-
 """
  BLOG APIS
 """
 
 
-
-
-
-
-@app.post(
-    "/api/blog/", 
-    status_code=status.HTTP_201_CREATED, 
-    response_model=dict
-)
+@app.post("/api/blog/", status_code=status.HTTP_201_CREATED, response_model=dict)
 async def create_blog_cloudinary(
     token: str = Header(),
     category_id: str = Form(...),
@@ -277,23 +261,34 @@ async def create_blog_cloudinary(
     VALIDATE_TOKEN(token)
 
     # 1. Read file content
-    file_content = await image.read()
-    # 2. Upload using utility
-    upload_file = upload_file_to_cloudinary(file_content)
+    if image is not None:
+        file_content = await image.read()
+        # 2. Upload using utility
+        upload_file = upload_file_to_cloudinary(file_content)
 
-    # 3. Create the document for MongoDB
-    blog_data = {
-        "url": upload_file["url"],
-        "secure_url": upload_file["secure_url"],
-        "public_id": upload_file["public_id"],
-        "post_title": post_title,
-        "body": body,
-        "category_id": category_id,
-        "category_name": category_name,
-        "short_title": short_title,
-        "draft": draft,
-        "date": str(datetime.now()),
-    }
+        # 3. Create the document for MongoDB
+        blog_data = {
+            "url": upload_file["url"],
+            "secure_url": upload_file["secure_url"],
+            "public_id": upload_file["public_id"],
+            "post_title": post_title,
+            "body": body,
+            "category_id": category_id,
+            "category_name": category_name,
+            "short_title": short_title,
+            "draft": draft,
+            "date": str(datetime.now()),
+        }
+    else:
+        blog_data = {
+            "post_title": post_title,
+            "body": body,
+            "category_id": category_id,
+            "category_name": category_name,
+            "short_title": short_title,
+            "draft": draft,
+            "date": str(datetime.now()),
+        }
 
     blog_collection = database["blog_posts_collection"]
     blog_collection.insert_one(blog_data)
@@ -302,9 +297,7 @@ async def create_blog_cloudinary(
 
 
 @app.put(
-    "/api/blog/{b_id}/", 
-    status_code=status.HTTP_200_OK, 
-    response_model=BlogPostOut
+    "/api/blog/{b_id}/", status_code=status.HTTP_200_OK, response_model=BlogPostOut
 )
 def edit_blog_content(
     b_id: str,
@@ -321,12 +314,12 @@ def edit_blog_content(
             "_id": "k2i39i0r392ir8439",
             "url": "https://example.com/image.jpg",
             "secure_url": "https://example.com/image.jpg",
+            "public_id": "HXC0-DWHDE",
             "post_title": "Sample Post Title",
             "category_name": "Sample Category",
             "category_id": "sample_category_id",
             "short_title": "Sample Short Title",
             "body": "Sample blog post body content.",
-            "iframe": "<iframe src='https://example.com'></iframe>",
         }
 
     VALIDATE_TOKEN(token)
@@ -359,8 +352,7 @@ def edit_blog_content(
 
     if data_target == None:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, 
-            detail="Resource not found"
+            status_code=status.HTTP_404_NOT_FOUND, detail="Resource not found"
         )
 
     blog_collection.update_one(
@@ -377,11 +369,7 @@ def edit_blog_content(
     "/api/blog/",
     response_model=BlogPostOutMultiple,
 )
-def get_blog_posts(
-    page: int = 1, 
-    limit: int = 15, 
-    category_id: Optional[str] = None
-):
+def get_blog_posts(page: int = 1, limit: int = 15, category_id: Optional[str] = None):
     if offline:
         return {
             "blogs": [
@@ -389,23 +377,23 @@ def get_blog_posts(
                     "_id": "k2i39i0r392ir8439",
                     "url": "https://example.com/image.jpg",
                     "secure_url": "https://example.com/image.jpg",
+                    "public_id": "HXC0-DWHDE",
                     "post_title": "Sample Post Title",
                     "category_name": "Sample Category",
                     "category_id": "sample_category_id",
                     "short_title": "Sample Short Title",
                     "body": "Sample blog post body content.",
-                    "iframe": "<iframe src='https://example.com'></iframe>",
                 },
                 {
                     "_id": "oi23j4oij234oij234",
                     "url": "https://example.com/image.jpg",
                     "secure_url": "https://example.com/image.jpg",
+                    "public_id": "HXC0-DWHDE",
                     "post_title": "Another Sample Post Title",
                     "category_name": "Another Sample Category",
                     "category_id": "another_sample_category_id",
                     "short_title": "Another Sample Short Title",
                     "body": "Another sample blog post body content.",
-                    "iframe": "<iframe src='https://example.com'></iframe>",
                 },
             ],
             "pages": 1,
@@ -422,9 +410,7 @@ def get_blog_posts(
     cursor = blog_collection.find({}).sort("_id", -1).skip(skip).limit(limit)
     if category_id is not None:
         cursor = (
-            blog_collection.find({"category_id": category_id})
-            .skip(skip)
-            .limit(limit)
+            blog_collection.find({"category_id": category_id}).skip(skip).limit(limit)
         )
 
     blogs = []
@@ -437,9 +423,7 @@ def get_blog_posts(
 
 # GET SPECIFIC BLOG POST
 @app.get(
-    "/api/blog/{b_id}/", 
-    status_code=status.HTTP_200_OK, 
-    response_model=BlogPostOut
+    "/api/blog/{b_id}/", status_code=status.HTTP_200_OK, response_model=BlogPostOut
 )
 def get_blog_content(b_id: str):
     if offline:
@@ -447,12 +431,12 @@ def get_blog_content(b_id: str):
             "_id": "k2i39i0r392ir8439",
             "url": "https://example.com/image.jpg",
             "secure_url": "https://example.com/image.jpg",
+            "public_id": "HXC0-DWHDE",
             "post_title": "Sample Post Title",
             "category_name": "Sample Category",
             "category_id": "sample_category_id",
             "short_title": "Sample Short Title",
             "body": "Sample blog post body content.",
-            "iframe": "<iframe src='https://example.com'></iframe>",
         }
     blog_collection = database["blog_posts_collection"]
     data_target = blog_collection.find_one({"_id": ObjectId(b_id)})
@@ -476,49 +460,37 @@ def delete_blog_post(b_id: str, token: str = Header()):
     data = blog_collection.find_one({"_id": ObjectId(b_id)})
     if data == None:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, 
-            detail="Resource not found"
+            status_code=status.HTTP_404_NOT_FOUND, detail="Resource not found"
         )
     blog_collection.delete_one(data)
     return {"status": True}
 
 
 # GET LAST BLOG POST
-@app.get(
-    "/api/get_last_post/", 
-    response_model=BlogPostOut
-)
+@app.get("/api/get_last_post/", response_model=BlogPostOut)
 def get_last_post():
     if offline:
         return {
             "_id": "k2i39i0r392ir8439",
             "url": "https://example.com/image.jpg",
             "secure_url": "https://example.com/image.jpg",
+            "public_id": "HXC0-DWHDE",
             "post_title": "Sample Post Title",
             "category_name": "Sample Category",
             "category_id": "sample_category_id",
             "short_title": "Sample Short Title",
             "body": "Sample blog post body content.",
-            "iframe": "<iframe src='https://example.com'></iframe>",
         }
     blog_collection = database["blog_posts_collection"]
     last_post = blog_collection.find_one({}, sort=[("_id", -1)])
 
     if not last_post:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, 
-            detail="No blog posts found"
+            status_code=status.HTTP_404_NOT_FOUND, detail="No blog posts found"
         )
 
     last_post["_id"] = str(last_post["_id"])
     return last_post
-
-
-
-
-
-
-
 
 
 """
@@ -526,11 +498,7 @@ PRODUCTS
 """
 
 
-@app.post(
-    "/api/product/", 
-    status_code=status.HTTP_201_CREATED, 
-    response_model=dict
-)
+@app.post("/api/product/", status_code=status.HTTP_201_CREATED, response_model=dict)
 async def create_product(
     category_id: str = Form(...),
     category_name: str = Form(...),
@@ -539,7 +507,7 @@ async def create_product(
     body: str = Form(...),
     draft: bool = Form(False),
     images: List[UploadFile] = File([]),
-    token: str = Header()
+    token: str = Header(),
 ):
     if offline:
         return {"status": True, "offline": True}
@@ -558,7 +526,7 @@ async def create_product(
         uploaded_images.append(upload_file_data)
 
     product_data = {
-        images: uploaded_images,
+        "images": uploaded_images,
         "product_name": product_name,
         "body": body,
         "category_id": category_id,
@@ -577,11 +545,7 @@ async def create_product(
     "/api/products/",
     response_model=ProductMultiple,
 )
-def get_products(
-    page: int = 1, 
-    limit: int = 15, 
-    category_id: Optional[str] = None
-):
+def get_products(page: int = 1, limit: int = 15, category_id: Optional[str] = None):
     if offline:
         return {
             "products": [
@@ -590,7 +554,8 @@ def get_products(
                     "images": [
                         {
                             "url": "https://example.com/image.jpg",
-                            "secure_url": "https://example.com/image.jpg"
+                            "secure_url": "https://example.com/image.jpg",
+                            "public_id": "HXC0-DWHDE"
                         }
                     ],
                     "product_name": "Sample Product Name",
@@ -605,7 +570,8 @@ def get_products(
                     "images": [
                         {
                             "url": "https://example.com/image.jpg",
-                            "secure_url": "https://example.com/image.jpg"
+                            "secure_url": "https://example.com/image.jpg",
+                            "public_id": "HXC0-DWHDE"
                         }
                     ],
                     "product_name": "Another Sample Product Name",
@@ -660,7 +626,8 @@ def get_product(p_id: str):
             "images": [
                 {
                     "url": "https://example.com/image.jpg",
-                    "secure_url": "https://example.com/image.jpg"
+                    "secure_url": "https://example.com/image.jpg",
+                    "public_id": "HXC0-DWHDE"
                 }
             ],
             "product_name": "Sample Product Name",
@@ -690,7 +657,8 @@ def get_last_product():
             "images": [
                 {
                     "url": "https://example.com/image.jpg",
-                    "secure_url": "https://example.com/image.jpg"
+                    "secure_url": "https://example.com/image.jpg",
+                    "public_id": "HXC0-DWHDE"
                 }
             ],
             "product_name": "Sample Product Name",
@@ -740,7 +708,7 @@ def edit_product(
     body: Optional[str] = Form(None),
     draft: Optional[bool] = Form(False),
     images: List[UploadFile] = File([]),
-    token: str = Header()
+    token: str = Header(),
 ):
     if offline:
         return {
@@ -748,7 +716,8 @@ def edit_product(
             "images": [
                 {
                     "url": "https://example.com/image.jpg",
-                    "secure_url": "https://example.com/image.jpg"
+                    "secure_url": "https://example.com/image.jpg",
+                    "public_id": "HXC0-DWHDE"
                 }
             ],
             "product_name": "Sample Product Name",
@@ -771,7 +740,7 @@ def edit_product(
         "short_description": short_description,
         "body": body,
         "draft": draft,
-        "images": update_images
+        "images": update_images,
     }
 
     for image in images:
@@ -781,7 +750,7 @@ def edit_product(
             {
                 "url": upload_file["url"],
                 "secure_url": upload_file["secure_url"],
-                "public_id": upload_file["public_id"]
+                "public_id": upload_file["public_id"],
             }
         )
 
@@ -793,8 +762,7 @@ def edit_product(
 
     if data_target == None:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, 
-            detail="Resource not found"
+            status_code=status.HTTP_404_NOT_FOUND, detail="Resource not found"
         )
 
     product_collection.update_one(
@@ -804,7 +772,6 @@ def edit_product(
     data_output = product_collection.find_one({"_id": ObjectId(p_id)})
     data_output["_id"] = str(data_output["_id"])
     return data_output
-
 
 
 """

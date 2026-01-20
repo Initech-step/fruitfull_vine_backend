@@ -23,7 +23,9 @@ def test_blog_posts_setup():
     # Insert test blog posts
     test_posts = [
         {
-            "image_url": "https://example.com/image1.jpg",
+            "secure_url": "https://example.com/image.jpg",
+            "url": "https://example.com/image.jpg",
+            "public_id": "https://example.com/image.jpg",
             "category_id": "cat1",
             "category_name": "Category 1",
             "post_title": "Test Blog Post 1",
@@ -33,7 +35,9 @@ def test_blog_posts_setup():
             "iframe": "www.example1.com",
         },
         {
-            "image_url": "https://example.com/image1.jpg",
+            "secure_url": "https://example.com/image.jpg",
+            "url": "https://example.com/image.jpg",
+            "public_id": "https://example.com/image.jpg",
             "category_id": "Cat2",
             "category_name": "Category 2",
             "post_title": "Test Blog Post 2",
@@ -59,7 +63,13 @@ def test_products_setup():
     # Insert test products
     test_products = [
         {
-            "image_url": "https://example.com/product1.jpg",
+            "images": [
+                {
+                    "url": "https://example.com/image.jpg",
+                    "secure_url": "https://example.com/image.jpg",
+                    "public_id": "XXU-HSGUWDW"
+                }
+            ],
             "category_id": "prodcat1",
             "category_name": "Product Category 1",
             "product_name": "Test Product 1",
@@ -68,7 +78,13 @@ def test_products_setup():
             "iframe": "www.product1.com",
         },
         {
-            "image_url": "https://example.com/product2.jpg",
+            "images": [
+                {
+                    "url": "https://example.com/image.jpg",
+                    "secure_url": "https://example.com/image.jpg",
+                    "public_id": "XXU-HSGUWDW"
+                }
+            ],
             "category_id": "prodcat2",
             "category_name": "Product Category 2",
             "product_name": "Test Product 2",
@@ -125,3 +141,4 @@ def clean_collections():
     # after each test
     for c in collections:
         c.delete_many({})
+ 

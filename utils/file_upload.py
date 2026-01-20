@@ -48,7 +48,7 @@ def upload_file_to_s3(file_data, file_name, content_type, is_product=True):
         return None
 
 
-def upload_file_to_cloudinary(file_data):
+def upload_file_to_cloudinary(file_data) -> dict:
     """
     Uploads a file to cloudinary.
     """
@@ -61,9 +61,9 @@ def upload_file_to_cloudinary(file_data):
         return {
             "url": upload_result.get("url"),
             "secure_url": upload_result.get("secure_url"),
-            "public_id": upload_result.get("public_id")
+            "public_id": upload_result.get("public_id"),
         }
 
     except Exception as e:
         print(f"Error uploading: {e}")
-        return None
+        return {}

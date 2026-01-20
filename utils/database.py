@@ -33,7 +33,7 @@ def connect_to_db() -> Dict[str, Any]:
             "blog_posts_collection": db["BlogPosts"],
             "products_collection": db["Products"],
             "contact_collection": db["Contacts"],
-            "product_images": db["ProductImages"]
+            "product_images": db["ProductImages"],
         }
     except Exception as e:
         print(e)
