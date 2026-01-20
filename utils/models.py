@@ -74,6 +74,7 @@ class ProductOut(OutputModel):
     product_name: str
     short_description: str
     body: str
+    draft: bool = False
     date: str = Field(default=str(date.today()))
 
 

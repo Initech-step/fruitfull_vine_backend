@@ -2,8 +2,6 @@ from fastapi import (
     FastAPI,
     HTTPException,
     status,
-    Request,
-    Response,
     Header,
     UploadFile,
     Form,
@@ -24,14 +22,14 @@ from utils.models import (
     BlogPostOutMultiple,
     ProductOut,
     ProductMultiple,
-    EmailNewsletter,
     ContactUs,
     ContactOut,
     ContactMultiple,
     CategoryType,
+    Images
 )
 import os
-
+import json
 
 def str_to_bool(s):
     s = s.strip().lower()  # Remove leading/trailing spaces and convert to lowercase
@@ -701,12 +699,15 @@ def delete_product(p_id: str, token: str = Header()):
     status_code=status.HTTP_200_OK,
     response_model=ProductOut,
 )
-def edit_product(
+async def edit_product(
     p_id: str,
     product_name: Optional[str] = Form(None),
     short_description: Optional[str] = Form(None),
     body: Optional[str] = Form(None),
     draft: Optional[bool] = Form(False),
+    category_name: str = Form(...),
+    category_id: str = Form(...),
+    existing_images: Optional[str] = Form(None),
     images: List[UploadFile] = File([]),
     token: str = Header(),
 ):
@@ -728,12 +729,31 @@ def edit_product(
             "iframe": "<iframe src='https://example.com'></iframe>",
         }
     VALIDATE_TOKEN(token)
-
     product_collection = database["products_collection"]
+    
     # 2. Build the update dictionary dynamically
-    # Only include fields that are not None
     update_data = {}
     update_images = []
+
+    # NEW IMAGES
+    if images is not None:
+        for image in images:
+            file_content = await image.read()
+            upload_file = upload_file_to_cloudinary(file_content)
+            update_images.append(
+                {
+                    "url": upload_file["url"],
+                    "secure_url": upload_file["secure_url"],
+                    "public_id": upload_file["public_id"],
+                }
+            )
+    # EXISTING IMAGES
+    if existing_images is not None:
+        try:
+            parsed_existing = json.loads(existing_images)
+        except:
+            parsed_existing = []
+        update_images.extend(parsed_existing)
 
     fields = {
         "product_name": product_name,
@@ -741,25 +761,15 @@ def edit_product(
         "body": body,
         "draft": draft,
         "images": update_images,
+        "category_name": category_name,
+        "category_id": category_id
     }
 
-    for image in images:
-        file_content = image.read()
-        upload_file = upload_file_to_cloudinary(file_content)
-        update_images.append(
-            {
-                "url": upload_file["url"],
-                "secure_url": upload_file["secure_url"],
-                "public_id": upload_file["public_id"],
-            }
-        )
-
+    # ORGANISE IN DICTIONARY
     for key, value in fields.items():
-        if value is not None:
-            update_data[key] = value
+        update_data[key] = value
 
     data_target = product_collection.find_one({"_id": ObjectId(p_id)})
-
     if data_target == None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Resource not found"

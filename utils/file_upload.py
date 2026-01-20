@@ -56,7 +56,6 @@ def upload_file_to_cloudinary(file_data) -> dict:
         upload_result = cloudinary.uploader.upload(
             file_data, resource_type="image", folder="fruitfulvine"
         )
-        print(f"\n {upload_result}")
         # Return the secure URL of the uploaded image
         return {
             "url": upload_result.get("url"),
