@@ -85,10 +85,10 @@ class ProductMultiple(BaseModel):
 
 
 class ContactUs(BaseModel):
-    name: Optional[str]
-    email: Optional[str]
-    message: Optional[str]
-    phone_number: str
+    name: str
+    email: Optional[str] = None
+    message: str
+    phone_number: Optional[str] = None
     created_at: str = Field(default=str(date.today()))
 
 
