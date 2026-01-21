@@ -594,7 +594,6 @@ def get_products(page: int = 1, limit: int = 15, category_id: Optional[str] = No
     total_pages = math.ceil(total_docs / limit)
 
     cursor = product_collection.find({}).sort("_id", -1).skip(skip).limit(limit)
-    print(cursor)
     if category_id is not None:
         cursor = (
             product_collection.find({"category_id": category_id})
