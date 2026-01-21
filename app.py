@@ -58,7 +58,6 @@ app.add_middleware(
 database = connect_to_db()
 offline = str_to_bool(os.getenv("OFFLINE_MODE", False))
 print(f"\n OFFLINE MODE: {offline} \n")
-print(type(offline))
 PAGINATION_PER_PAGE = 10
 
 
@@ -118,7 +117,6 @@ CATEGORY APIS
 @app.post("/api/category/", status_code=status.HTTP_201_CREATED, response_model=dict)
 def create_category(category: Category, token: str = Header()):
     if offline:
-        print("Offline mode: skipping category creation")
         return {"status": True}
 
     if VALIDATE_TOKEN(token):
@@ -128,7 +126,6 @@ def create_category(category: Category, token: str = Header()):
             category_collection.insert_one(category_data)
             return {"status": True}
         except Exception as e:
-            print(e)
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail="Failed to create catgory",
@@ -606,7 +603,6 @@ def get_products(page: int = 1, limit: int = 15, category_id: Optional[str] = No
     for doc in cursor:
         doc["_id"] = str(doc["_id"])
         products.append(doc)
-        print(doc)
 
     return {"products": products, "pages": total_pages, "current_page": page}
 
