@@ -46,7 +46,10 @@ def str_to_bool(s):
 app = FastAPI()
 
 """SET UP CORS"""
-origins = ["http://localhost:3000", "https://fruitfulvine.netlify.app"]
+origins = [
+    "http://localhost:3000", 
+    "https://fruitfulvine.netlify.app"
+]
 app.add_middleware(
     CORSMiddleware,
     allow_origins=origins,
