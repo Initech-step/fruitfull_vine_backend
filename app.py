@@ -47,6 +47,8 @@ app = FastAPI()
 
 """SET UP CORS"""
 origins = [
+    "http://fruitfulvinemobile.com",
+    "https://fruitfulvinemobile.com",
     "http://localhost:3000", 
     "https://fruitfulvine.netlify.app"
 ]
