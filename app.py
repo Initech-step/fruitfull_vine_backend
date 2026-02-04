@@ -297,7 +297,9 @@ async def create_blog_cloudinary(
 
 
 @app.put(
-    "/api/blog/{b_id}/", status_code=status.HTTP_200_OK, response_model=BlogPostOut
+    "/api/blog/{b_id}/", 
+    status_code=status.HTTP_200_OK, 
+    response_model=BlogPostOut
 )
 def edit_blog_content(
     b_id: str,
@@ -369,7 +371,11 @@ def edit_blog_content(
     "/api/blog/",
     response_model=BlogPostOutMultiple,
 )
-def get_blog_posts(page: int = 1, limit: int = 15, category_id: Optional[str] = None):
+def get_blog_posts(
+    page: int = 1, 
+    limit: int = 15, 
+    category_id: Optional[str] = None
+):
     if offline:
         return {
             "blogs": [
@@ -412,6 +418,64 @@ def get_blog_posts(page: int = 1, limit: int = 15, category_id: Optional[str] = 
         cursor = (
             blog_collection.find({"category_id": category_id}).skip(skip).limit(limit)
         )
+
+    blogs = []
+    for doc in cursor:
+        doc["_id"] = str(doc["_id"])
+        blogs.append(doc)
+
+    return {"blogs": blogs, "pages": total_pages, "current_page": page}
+
+
+@app.get(
+    "/api/blog/category/{category_id}/",
+    response_model=BlogPostOutMultiple,
+)
+def get_blog_posts(
+    category_id: str,
+    page: int = 1, 
+    limit: int = 15, 
+):
+    if offline:
+        return {
+            "blogs": [
+                {
+                    "_id": "k2i39i0r392ir8439",
+                    "url": "https://example.com/image.jpg",
+                    "secure_url": "https://example.com/image.jpg",
+                    "public_id": "HXC0-DWHDE",
+                    "post_title": "Sample Post Title",
+                    "category_name": "Sample Category",
+                    "category_id": "sample_category_id",
+                    "short_title": "Sample Short Title",
+                    "body": "Sample blog post body content.",
+                },
+                {
+                    "_id": "oi23j4oij234oij234",
+                    "url": "https://example.com/image.jpg",
+                    "secure_url": "https://example.com/image.jpg",
+                    "public_id": "HXC0-DWHDE",
+                    "post_title": "Another Sample Post Title",
+                    "category_name": "Another Sample Category",
+                    "category_id": "another_sample_category_id",
+                    "short_title": "Another Sample Short Title",
+                    "body": "Another sample blog post body content.",
+                },
+            ],
+            "pages": 1,
+            "current_page": 1,
+        }
+    blog_collection = database["blog_posts_collection"]
+    # guardrails
+    page = max(page, 1)
+    limit = min(max(limit, 1), 50)
+    skip = (page - 1) * limit
+    total_docs = blog_collection.count_documents({})
+    total_pages = math.ceil(total_docs / limit)
+
+    cursor = blog_collection.find(
+        {"category_id": category_id}
+    ).sort("_id", -1).skip(skip).limit(limit)
 
     blogs = []
     for doc in cursor:
@@ -545,7 +609,11 @@ async def create_product(
     "/api/products/",
     response_model=ProductMultiple,
 )
-def get_products(page: int = 1, limit: int = 15, category_id: Optional[str] = None):
+def get_products(
+    page: int = 1, 
+    limit: int = 15, 
+    category_id: Optional[str] = None
+):
     if offline:
         return {
             "products": [
